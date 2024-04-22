@@ -153,7 +153,7 @@ sweep_config = EasyDict(
                     parameters=dict(
                         type=dict(
                             values=[
-                                "velocity_function",
+                                "score_function",
                             ],
                         ),
                     ),
@@ -163,13 +163,10 @@ sweep_config = EasyDict(
         parameter=dict(
             parameters=dict(
                 training_loss_type=dict(
-                    values=["flow_matching"],
+                    values=["score_matching"],
                 ),
                 lr=dict(
-                    values=[2e-3] # ,3e-3,4e-3,5e-3],
-                ),
-                accumulation_steps=dict(
-                    values=[1], #, 2, 3, 4],
+                    values=[1e-4] # ,3e-3,4e-3,5e-3],
                 ),
             ),
         ),
@@ -238,8 +235,8 @@ def main():
             ),
             parameter = dict(
                 training_loss_type = "score_matching",
-                lr=5e-3,
-                weight_decay=1e-4,
+                lr=5e-4,
+                weight_decay=0,
                 iterations=100000,
                 batch_size=4096,
                 clip_grad_norm=1.0,
@@ -257,7 +254,8 @@ def main():
     ) as wandb_run:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         config = EasyDict(wandb.config)
-        run_name = f"{config.diffusion_model.path.type}-{config.diffusion_model.model.type}-{config.parameter.training_loss_type}--{config.parameter.accumulation_steps}--{config.parameter.lr}"
+        # run_name = f"{config.diffusion_model.path.type}-{config.diffusion_model.model.type}-{config.parameter.training_loss_type}--{config.parameter.lr}"
+        run_name = 'no_weightdecay_flow'
         wandb.run.name = run_name
         wandb.run.save()
         
@@ -312,6 +310,9 @@ def main():
                 loss=diffusion_model.score_matching_loss(x=batch_data_x, condition=batch_data_cond)
             else:
                 raise NotImplementedError("Unknown loss type")
+            if torch.isnan(loss):
+                print(f'+++++++++++++++++ loss is nan at {iteration}')
+                breakpoint()
             optimizer.zero_grad()
             loss.backward()
             gradien_norm = torch.nn.utils.clip_grad_norm_(diffusion_model.parameters(), config.parameter.clip_grad_norm)
