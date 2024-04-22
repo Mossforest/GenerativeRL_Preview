@@ -1,9 +1,9 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='generative_rl',
+    name='GenerativeRL',
     version='0.0.1',
-    description='PyTorch implementations of deep generative reinforcement learning algorithms',
+    description='PyTorch implementations of generative reinforcement learning algorithms',
     author='zjowowen',
 
     packages=find_packages(
@@ -17,18 +17,27 @@ setup(
         'matplotlib',
         'wandb',
         'rich',
-        'mujoco_py',
         'easydict',
-        'Cython<3.0',
         'tqdm',
         'torchdyn',
         'torchode',
         'torchsde',
         'scipy',
+        'beartype',
         'diffusers',
         'timm',
         'av',
         'moviepy',
         'imageio[ffmpeg]',
-    ]
+    ],
+    extras_require={
+        'd4rl': [
+            'gym==0.23.1',
+            'mujoco_py',
+            'Cython<3.0',
+        ],
+        'DI-engine': [
+            'DI-engine',
+        ]
+    }
 )
