@@ -16,13 +16,11 @@ from matplotlib import animation
 from easydict import EasyDict
 import torch
 import torch.nn as nn
-from torch.utils.data import random_split
 from torch.utils.data import Dataset
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
-from generative_rl.machine_learning.generative_models.diffusion_model.diffusion_model import DiffusionModel
+from grl.generative_models.diffusion_model.diffusion_model import DiffusionModel
+from grl.generative_models.metric import compute_likelihood
 
-project="test_dynamic_v2_1_test"
+project="test_dynamic_v2_1"
 
 
 
@@ -44,6 +42,11 @@ def get_dataset(data_path, train_ratio=0.9):
     data_list = list(data_dict.items())
     key_list = [item[0] for item in data_list]
     value_list = [item[1] for item in data_list]
+    
+    # norm to [-1, 1] (for gvp)
+    for val in value_list[:2]:
+        mmax, mmin = torch.max(val), torch.min(val)
+        val = (mmax - val) / (mmax - mmin) * 2 - 1
 
     np.random.seed(0)  # 为了可重现性设置随机种子
     permuted_indices = np.random.permutation(len(value_list[0]))
@@ -155,7 +158,7 @@ sweep_config = EasyDict(
                     parameters=dict(
                         type=dict(
                             values=[
-                                "score_function",
+                                "velocity_function",
                             ],
                         ),
                     ),
@@ -165,7 +168,7 @@ sweep_config = EasyDict(
         parameter=dict(
             parameters=dict(
                 training_loss_type=dict(
-                    values=["score_matching"],
+                    values=["flow_matching"],
                 ),
                 lr=dict(
                     values=[1e-4] # ,3e-3,4e-3,5e-3],
@@ -177,8 +180,6 @@ sweep_config = EasyDict(
 
 
 def main():
-    action_size=4
-    state_size=24
     device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
     # t_embedding_dim = 32
     # t_encoder = dict(
@@ -193,7 +194,7 @@ def main():
             device = device,
             diffusion_model = dict(
                 device = device,
-                x_size = state_size,
+                x_size = (64, 6, 6),
                 alpha = 1.0,
                 solver = dict(
                     type = "ODESolver",
@@ -202,41 +203,33 @@ def main():
                     ),
                 ),
                 path = dict(
-                    type = "linear_vp_sde",
+                    type = "gvp", 
                     beta_0 = 0.1,
                     beta_1 = 20.0,
                 ),
                 model = dict(
-                    type = "score_function",
+                    type = "score_function", # "velocity_function",
                     args = dict(
                         # t_encoder = t_encoder,
                         backbone = dict(
-                            type = "transformer_1d", #TODO
+                            type = "dit",
                             args = dict(
-                                input_dim = 1,
-                                sequence_dim = state_size,
-                                hidden_dim = 128,
-                                output_dim = 1,
-                                condition_config = dict(
-                                    backbone = dict(
-                                        type = "ConcatenateMLP",
-                                        args = dict(
-                                            hidden_sizes = [action_size + state_size, 256, 256],
-                                            output_size = 128,
-                                            activation = "silu",
-                                            layernorm = True,
-                                            final_activation = "tanh",
-                                            shrink = 0.1,
-                                        ),
-                                    ),
-                                ),
+                                input_size = 6,
+                                patch_size = 2,
+                                in_channels = 64,
+                                hidden_size = 256,
+                                depth = 6,
+                                num_heads = 8,
+                                mlp_ratio = 2.0,
+                                # TODO: condition embedder is label not continuous (change in v2.3)
+                                learn_sigma = False,
                             ),
                         ),
                     ),
                 ),
             ),
             parameter = dict(
-                training_loss_type = "score_matching",
+                training_loss_type = "score_matching", # "flow_matching",
                 lr=5e-4,
                 weight_decay=0,
                 iterations=100000,
@@ -255,7 +248,7 @@ def main():
     ) as wandb_run:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         config = EasyDict(wandb.config)
-        run_name = 'no_weightdecay_flow'
+        run_name = 'test_flow'
         wandb.run.name = run_name
         wandb.run.save()
         
@@ -264,7 +257,7 @@ def main():
         def get_train_data(dataloader):
             while True:
                 yield from dataloader
-        dataset, eval_dataset = get_dataset(config.train_data_path)
+        dataset, eval_dataset = get_dataset(config.data_path)
         data_loader = torch.utils.data.DataLoader(dataset, batch_size=config.parameter.batch_size, shuffle=True)
         data_generator = get_train_data(data_loader)
         eval_data_loader = torch.utils.data.DataLoader(eval_dataset, batch_size=config.parameter.eval_batch_size, shuffle=False)
@@ -312,7 +305,6 @@ def main():
             print(f"iteration {iteration}, gradient {gradient_sum/counter}, loss {loss_sum/counter}")
             
             if (iteration > 0 and iteration % config.parameter.eval_freq == 0) or iteration == config.parameter.iterations - 1:
-                # TODO: waiting for GRL likelihood, FID, IS... metrics
                 # eval_batch_data = next(eval_data_generator)
                 
                 # diffusion_model.eval()
@@ -321,7 +313,7 @@ def main():
                 # x_t=[x.squeeze(0) for x in torch.split(x_t, split_size_or_sections=1, dim=0)]
                 # eval_loss = torch.nn.functional.mse_loss(x_t[-1].squeeze(), eval_data_x)
                 # print(f'eval_loss: {eval_loss.item()}')
-                save_checkpoint(diffusion_model, optimizer, iteration, f'{project}/{run_name}/checkpoint')
+                # save_checkpoint(diffusion_model, optimizer, iteration, f'{project}/{run_name}/checkpoint')
                 
                 wandb_run.log(data=dict(iteration=iteration, gradient=gradient_sum / counter, loss=loss.item()), commit=True)
                 # wandb_run.log(data=dict(iteration=iteration, gradient=gradient_sum / counter, loss=loss.item(), eval_loss=eval_loss.item()), commit=True)

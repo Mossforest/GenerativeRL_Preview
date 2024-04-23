@@ -5,8 +5,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 from tensordict import TensorDict
-from generative_rl.machine_learning.modules import MLP, get_module
-from generative_rl.machine_learning.encoders import get_encoder
+from grl.neural_network import MLP, get_module
+from grl.neural_network.encoders import get_encoder
 from timm.models.vision_transformer import PatchEmbed, Attention, Mlp
 
 
