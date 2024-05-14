@@ -3,6 +3,7 @@ from easydict import EasyDict
 from rich.progress import track
 import numpy as np
 import h5py
+import time
 import random
 import matplotlib
 matplotlib.use('Agg')
@@ -191,6 +192,7 @@ def main():
     # )
     config = EasyDict(
         dict(
+            x_size = (64, 6, 6),
             device = device,
             diffusion_model = dict(
                 device = device,
@@ -236,7 +238,7 @@ def main():
                 batch_size=4096,
                 clip_grad_norm=1.0,
                 eval_freq=5000,
-                eval_batch_size=10, #500,
+                eval_batch_size=16, #500,
                 device=device,
             ),
             data_path = '/mnt/nfs/chenxinyan/muzero/muzero_hidden_data/hidden/latent_data_dict.pth',
@@ -248,7 +250,7 @@ def main():
     ) as wandb_run:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         config = EasyDict(wandb.config)
-        run_name = 'test_flow'
+        run_name = 'correct_score_estimator_0428'
         wandb.run.name = run_name
         wandb.run.save()
         
@@ -278,6 +280,7 @@ def main():
         loss_sum=0.0
         counter=0
         iteration=0
+        eval_batch_data = next(eval_data_generator)
         
         for iteration in track(range(config.parameter.iterations), description="Training"):
 
@@ -305,18 +308,18 @@ def main():
             print(f"iteration {iteration}, gradient {gradient_sum/counter}, loss {loss_sum/counter}")
             
             if (iteration > 0 and iteration % config.parameter.eval_freq == 0) or iteration == config.parameter.iterations - 1:
-                # eval_batch_data = next(eval_data_generator)
+                t1 = time.time()
+                logp=compute_likelihood(
+                    model=diffusion_model,
+                    x=eval_batch_data['next_state'],
+                    using_Hutchinson_trace_estimator=True)
+                print(f'finieh eval: {time.time() - t1}')
+                logp_mean = logp.mean()
+                bits_per_dim = -logp_mean / (torch.prod(torch.tensor(config.x_size, device=config.device)) * torch.log(torch.tensor(2.0, device=config.device)))
+                print(f"iteration {iteration}, gradient {gradient_sum/counter}, loss {loss_sum/counter}, log likelihood {logp_mean.item()}, bits_per_dim {bits_per_dim.item()}")
                 
-                # diffusion_model.eval()
-                # t_span=torch.linspace(0.0, 1.0, 1000)
-                # x_t = diffusion_model.sample_forward_process(t_span=t_span, batch_size=config.parameter.eval_batch_size).cpu().detach()
-                # x_t=[x.squeeze(0) for x in torch.split(x_t, split_size_or_sections=1, dim=0)]
-                # eval_loss = torch.nn.functional.mse_loss(x_t[-1].squeeze(), eval_data_x)
-                # print(f'eval_loss: {eval_loss.item()}')
-                # save_checkpoint(diffusion_model, optimizer, iteration, f'{project}/{run_name}/checkpoint')
-                
-                wandb_run.log(data=dict(iteration=iteration, gradient=gradient_sum / counter, loss=loss.item()), commit=True)
-                # wandb_run.log(data=dict(iteration=iteration, gradient=gradient_sum / counter, loss=loss.item(), eval_loss=eval_loss.item()), commit=True)
+                save_checkpoint(diffusion_model, optimizer, iteration, f'{project}/{run_name}/checkpoint')
+                wandb_run.log(data=dict(iteration=iteration, gradient=gradient_sum / counter, loss=loss.item(), log_likelihood=logp_mean.item(), bits_per_dim=bits_per_dim.item()), commit=True)
             else:
                 wandb_run.log(data=dict(iteration=iteration, gradient=gradient_sum / counter, loss=loss.item()), commit=True)
 
