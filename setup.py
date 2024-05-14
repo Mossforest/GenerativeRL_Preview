@@ -24,12 +24,15 @@ setup(
         'torchode',
         'torchsde',
         'scipy',
+        'POT',
         'beartype',
         'diffusers',
-        'timm',
         'av',
         'moviepy',
         'imageio[ffmpeg]',
+    ],
+    dependency_links=[
+        'git+https://github.com/rtqichen/torchdiffeq.git#egg=torchdiffeq',
     ],
     extras_require={
         'd4rl': [
@@ -39,6 +42,10 @@ setup(
         ],
         'DI-engine': [
             'DI-engine',
-        ]
+        ],
+        'formatter': [
+            'black',
+            'isort',
+        ],
     }
 )

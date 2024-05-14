@@ -23,23 +23,42 @@ pip install grl
 
 ```bash
 git clone https://github.com/zjowowen/GenerativeRL_Preview.git
-cd generative-rl
+cd GenerativeRL_Preview
 pip install -e .
+```
+
+或者你可以使用 Docker 镜像：
+```bash
+docker pull zjowowen/grl:torch2.3.0-cuda12.1-cudnn8-runtime
+docker run -it --rm --gpus all zjowowen/grl:torch2.3.0-cuda12.1-cudnn8-runtime /bin/bash
 ```
 
 ## 启动
 
-这是一个在 MuJoCo 环境中训练 Q-guided policy optimization (QGPO) 的扩散模型的示例：
+这是一个在 LunarLanderContinuous-v2 环境中训练 Q-guided policy optimization (QGPO) 的扩散模型的示例。
+
+安装所需依赖：
+```bash
+pip install gym[box2d]==0.23.1
+```
+
+数据集可以从 [这里](https://drive.google.com/file/d/1YnT-Oeu9LPKuS_ZqNc5kol_pMlJ1DwyG/view?usp=drive_link) 下载，请将其置于工作路径下，并命名为 `data.npz`。
+
+GenerativeRL 使用 WandB 记录训练日志。在使用时会要求你联网登录账号，你可以通过以下方式禁用它：
+```bash
+wandb offline
+```
 
 ```python
-from grl_pipelines.configurations.halfcheetah_qgpo import config
-from grl.algorithms import QGPOAlgorithm
-from grl.utils.log import log
 import gym
 
-def qgpo_pipeline(config):
+from grl.algorithms.qgpo import QGPOAlgorithm
+from grl.datasets import QGPOCustomizedDataset
+from grl.utils.log import log
+from grl_pipelines.diffusion_model.configurations.lunarlander_continuous_qgpo import config
 
-    qgpo = QGPOAlgorithm(config)
+def qgpo_pipeline(config):
+    qgpo = QGPOAlgorithm(config, dataset=QGPOCustomizedDataset(numpy_data_path="./data.npz", device=config.train.device))
     qgpo.train()
 
     agent = qgpo.deploy()
