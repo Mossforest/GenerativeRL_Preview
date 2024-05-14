@@ -34,7 +34,7 @@ from grl.neural_network.transformers.dit import DiTBlock, FinalLayer, get_2d_sin
 from grl.cxy_models.diffusion import DiT_Special
 from grl.cxy_models.datasets import MetadriveDataset, get_dataset
 
-project="test_dynamic_v2_1"
+project="test_dynamic_swiss_roll"
 
 register_module(DiT_Special, "DiT_Special")
 
