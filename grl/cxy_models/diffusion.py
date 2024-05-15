@@ -278,7 +278,6 @@ class DiT_Special(nn.Module):
         t = self.t_embedder(t)                   # (N, D)
         
         if condition is not None:
-            #TODO: polish this part
             y = self.y_embedder(condition)    # (N, D)
             c = t + y                                # (N, D)
         else:
