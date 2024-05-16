@@ -19,6 +19,7 @@ import wandb
 from matplotlib import animation
 from easydict import EasyDict
 import torch
+import torch.nn.functional as F
 import torch.nn as nn
 import treetensor
 from tensordict import TensorDict
@@ -36,10 +37,13 @@ from grl.cxy_models.diffusion import ConditionEmbedder, CrossAttention
 class Classifier(nn.Module):
     """
     Overview:
-        Embeds class labels into vector representations. Also handles label dropout for classifier-free guidance.
+        The delta-state classifier rho of model v2
     Arguments:
         patch_enabled (bool): if enabled, the input state should be [B, P, C] where the patch as a length of seq-model; 
                               if False, the input should be [B, C] and the cross attention will be [B, 1, C]
+    Output:
+        output (Tensor): if patch_enabled, the shape would be [B, P];
+                         if else, the shape would be [B]
     """
     def __init__(
             self,
@@ -64,14 +68,14 @@ class Classifier(nn.Module):
             activation=activation,
             final_activation=activation
         )
-        self.cross_attention =  CrossAttention(input_size=hidden_size, num_heads=8, length_1=(not self.patch_enabled))
-        self.classifer = MultiLayerPerceptron(
+        self.cross_attention =  CrossAttention(input_size=hidden_size, num_heads=8)
+        self.predicter = MultiLayerPerceptron(
             hidden_sizes=[hidden_size] + [hidden_size for _ in range(classify_layer)],
-            output_size=patch_size,
+            output_size=1,
             activation=activation,
             final_activation=activation
         )
-        # TODO: will multi-MLP tackle with the P dimension in [B, P, C]? I want it not to. where the only tackled dimention is C
+        # TODO: will multi-MLP tackle with the P dimension in [B, P, C]? I want it not to. where the only tackled dimension is C
 
 
     def forward(
@@ -98,8 +102,8 @@ class Classifier(nn.Module):
             assert state.shape[1] == self.patch_size
             condition = condition.unsqueeze(1).repeat(1, self.patch_size, 1)
         state_attn = self.cross_attention(condition, state_emb)
-        state_attn = state_attn.unsqueeze()
-        predict = self.classifier(state_attn)
+        state_attn = state_attn.squeeze()
+        predict = self.predicter(state_attn).squeeze()
         return predict
     
     def loss(
@@ -108,5 +112,42 @@ class Classifier(nn.Module):
         state: torch.Tensor,
         next_state: torch.Tensor,
     ):
-        pass
+        # euclid -> abs -> tanh to [0, 1]
+        target = torch.abs(torch.norm(next_state - state, dim=-1))
+        target = torch.tanh(target)
+        loss = F.mse_loss(predict, target)
         return loss
+
+
+if __name__ == '__main__':
+    B = 64
+    P = 4
+    C = 16
+    H = 256
+    action_size = 4
+    bg_size = 2
+    enable_patch = True
+    epoch = 100
+    
+    if enable_patch:
+        state = torch.rand((B, P, C))
+        next_state = torch.rand((B, P, C))
+    else:
+        state = torch.rand((B, C))
+        next_state = torch.rand((B, C))
+    action = torch.rand((B, action_size))
+    background = torch.rand((B, bg_size))
+    
+    classifier = Classifier(C, action_size, bg_size, H, enable_patch, P)
+    optim = torch.optim.SGD(classifier.parameters(), lr=0.01)
+    
+    for i in range(epoch):
+        predict = classifier(state, action, background)
+        loss = classifier.loss(predict, state, next_state)
+        
+        optim.zero_grad()
+        loss.backward()
+        optim.step()
+        print(f'epoch {i}, loss {loss.item()}')
+    
+    print('done!')
