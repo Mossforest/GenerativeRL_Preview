@@ -35,7 +35,7 @@ t_encoder = dict(
 )
 data_num = 10000
 config = EasyDict(
-    project="energy_conditioned_diffusion_model_swiss_roll",
+    project="test_dynamic_swiss_roll",
     dataset=dict(
         data_num=data_num,
         noise=0.6,
@@ -200,61 +200,61 @@ if __name__ == "__main__":
     seed_value = set_seed()
     log.info(f"start exp with seed value {seed_value}.")
 
-    value_function_model = OneShotValueFunction(config.model.value_function_model).to(
-        config.model.value_function_model.device
-    )
-    energy_conditioned_diffusion_model = EnergyConditionalDiffusionModel(
-        config.model.diffusion_model, energy_model=value_function_model
-    ).to(config.model.diffusion_model.device)
+    # value_function_model = OneShotValueFunction(config.model.value_function_model).to(
+    #     config.model.value_function_model.device
+    # )
+    # energy_conditioned_diffusion_model = EnergyConditionalDiffusionModel(
+    #     config.model.diffusion_model, energy_model=value_function_model
+    # ).to(config.model.diffusion_model.device)
 
-    value_function_model = torch.compile(value_function_model)
-    energy_conditioned_diffusion_model = torch.compile(
-        energy_conditioned_diffusion_model
-    )
+    # value_function_model = torch.compile(value_function_model)
+    # energy_conditioned_diffusion_model = torch.compile(
+    #     energy_conditioned_diffusion_model
+    # )
 
-    if config.parameter.evaluation.model_save_path is not None:
+    # if config.parameter.evaluation.model_save_path is not None:
 
-        if not os.path.exists(config.parameter.evaluation.model_save_path):
-            log.warning(
-                f"Checkpoint path {config.parameter.evaluation.model_save_path} does not exist"
-            )
-            diffusion_model_iteration = 0
-            value_model_iteration = 0
-        else:
-            checkpoint_files = [
-                f
-                for f in os.listdir(config.parameter.evaluation.model_save_path)
-                if f.endswith(".pt")
-            ]
-            if len(checkpoint_files) == 0:
-                log.warning(
-                    f"No checkpoint files found in {config.parameter.evaluation.model_save_path}"
-                )
-                diffusion_model_iteration = 0
-                value_model_iteration = 0
-            else:
-                checkpoint_files = sorted(
-                    checkpoint_files, key=lambda x: int(x.split("_")[-1].split(".")[0])
-                )
-                checkpoint = torch.load(
-                    os.path.join(
-                        config.parameter.evaluation.model_save_path,
-                        checkpoint_files[-1],
-                    ),
-                    map_location="cpu",
-                )
-                energy_conditioned_diffusion_model.load_state_dict(
-                    checkpoint["diffusion_model"]
-                )
-                value_function_model.load_state_dict(checkpoint["value_model"])
-                diffusion_model_iteration = checkpoint.get(
-                    "diffusion_model_iteration", 0
-                )
-                value_model_iteration = checkpoint.get("value_model_iteration", 0)
+    #     if not os.path.exists(config.parameter.evaluation.model_save_path):
+    #         log.warning(
+    #             f"Checkpoint path {config.parameter.evaluation.model_save_path} does not exist"
+    #         )
+    #         diffusion_model_iteration = 0
+    #         value_model_iteration = 0
+    #     else:
+    #         checkpoint_files = [
+    #             f
+    #             for f in os.listdir(config.parameter.evaluation.model_save_path)
+    #             if f.endswith(".pt")
+    #         ]
+    #         if len(checkpoint_files) == 0:
+    #             log.warning(
+    #                 f"No checkpoint files found in {config.parameter.evaluation.model_save_path}"
+    #             )
+    #             diffusion_model_iteration = 0
+    #             value_model_iteration = 0
+    #         else:
+    #             checkpoint_files = sorted(
+    #                 checkpoint_files, key=lambda x: int(x.split("_")[-1].split(".")[0])
+    #             )
+    #             checkpoint = torch.load(
+    #                 os.path.join(
+    #                     config.parameter.evaluation.model_save_path,
+    #                     checkpoint_files[-1],
+    #                 ),
+    #                 map_location="cpu",
+    #             )
+    #             energy_conditioned_diffusion_model.load_state_dict(
+    #                 checkpoint["diffusion_model"]
+    #             )
+    #             value_function_model.load_state_dict(checkpoint["value_model"])
+    #             diffusion_model_iteration = checkpoint.get(
+    #                 "diffusion_model_iteration", 0
+    #             )
+    #             value_model_iteration = checkpoint.get("value_model_iteration", 0)
 
-    else:
-        diffusion_model_iteration = 0
-        value_model_iteration = 0
+    # else:
+    #     diffusion_model_iteration = 0
+    #     value_model_iteration = 0
 
     # get data
     x_and_t = make_swiss_roll(
@@ -276,13 +276,18 @@ if __name__ == "__main__":
         os.makedirs(config.parameter.evaluation.video_save_path)
     plt.savefig(
         os.path.join(
-            config.parameter.evaluation.video_save_path, f"swiss_roll_data.png"
+            config.parameter.evaluation.video_save_path, f"swiss_roll_data_origin.png"
         )
     )
     plt.clf()
 
     # zip x and value
     data = np.concatenate([x, value[:, None]], axis=1)
+    
+    # pair the sampled (x, t) 2by2
+    pair_sampled_num = 1e5
+    
+    
 
     def get_train_data(dataloader):
         while True:
@@ -292,291 +297,294 @@ if __name__ == "__main__":
         data, batch_size=config.parameter.unconditional_model.batch_size, shuffle=True
     )
     data_generator = get_train_data(data_loader)
+    
+    
+    
 
-    unconditional_model_optimizer = torch.optim.Adam(
-        energy_conditioned_diffusion_model.model.parameters(),
-        lr=config.parameter.unconditional_model.learning_rate,
-    )
+    # unconditional_model_optimizer = torch.optim.Adam(
+    #     energy_conditioned_diffusion_model.model.parameters(),
+    #     lr=config.parameter.unconditional_model.learning_rate,
+    # )
 
-    moving_average_loss = 0.0
+    # moving_average_loss = 0.0
 
-    subprocess_list = []
+    # subprocess_list = []
 
-    for train_iter in track(
-        range(config.parameter.unconditional_model.iterations),
-        description="unconditional_model training",
-    ):
-        if train_iter < diffusion_model_iteration:
-            continue
+    # for train_iter in track(
+    #     range(config.parameter.unconditional_model.iterations),
+    #     description="unconditional_model training",
+    # ):
+    #     if train_iter < diffusion_model_iteration:
+    #         continue
 
-        train_data = next(data_generator).to(config.model.diffusion_model.device)
-        train_x, train_value = train_data[:, :x_size], train_data[:, x_size]
-        unconditional_model_training_loss = (
-            energy_conditioned_diffusion_model.score_matching_loss(train_x)
-        )
-        unconditional_model_optimizer.zero_grad()
-        unconditional_model_training_loss.backward()
-        unconditional_model_optimizer.step()
-        moving_average_loss = (
-            0.99 * moving_average_loss + 0.01 * unconditional_model_training_loss.item()
-            if train_iter > 0
-            else unconditional_model_training_loss.item()
-        )
-        if train_iter % 100 == 0:
-            log.info(
-                f"iteration {train_iter}, unconditional model loss {unconditional_model_training_loss.item()}, moving average loss {moving_average_loss}"
-            )
+    #     train_data = next(data_generator).to(config.model.diffusion_model.device)
+    #     train_x, train_value = train_data[:, :x_size], train_data[:, x_size]
+    #     unconditional_model_training_loss = (
+    #         energy_conditioned_diffusion_model.score_matching_loss(train_x)
+    #     )
+    #     unconditional_model_optimizer.zero_grad()
+    #     unconditional_model_training_loss.backward()
+    #     unconditional_model_optimizer.step()
+    #     moving_average_loss = (
+    #         0.99 * moving_average_loss + 0.01 * unconditional_model_training_loss.item()
+    #         if train_iter > 0
+    #         else unconditional_model_training_loss.item()
+    #     )
+    #     if train_iter % 100 == 0:
+    #         log.info(
+    #             f"iteration {train_iter}, unconditional model loss {unconditional_model_training_loss.item()}, moving average loss {moving_average_loss}"
+    #         )
 
-        diffusion_model_iteration = train_iter
+    #     diffusion_model_iteration = train_iter
 
-        if (
-            train_iter == 0
-            or (train_iter + 1) % config.parameter.evaluation.eval_freq == 0
-        ):
-            energy_conditioned_diffusion_model.eval()
-            for guidance_scale in [0.0]:
-                t_span = torch.linspace(0.0, 1.0, 1000)
-                x_t = (
-                    energy_conditioned_diffusion_model.sample_forward_process(
-                        t_span=t_span, batch_size=500, guidance_scale=guidance_scale
-                    )
-                    .cpu()
-                    .detach()
-                )
-                x_t = [
-                    x.squeeze(0)
-                    for x in torch.split(x_t, split_size_or_sections=1, dim=0)
-                ]
-                p = mp.Process(
-                    target=render_video,
-                    args=(
-                        x_t,
-                        config.parameter.evaluation.video_save_path,
-                        f"diffusion_model_iteration_{diffusion_model_iteration}_value_model_iteration_{value_model_iteration}",
-                        guidance_scale,
-                        100,
-                        100,
-                    ),
-                )
-                p.start()
-                subprocess_list.append(p)
-            save_checkpoint(
-                diffusion_model=energy_conditioned_diffusion_model,
-                value_model=value_function_model,
-                diffusion_model_iteration=diffusion_model_iteration,
-                value_model_iteration=value_model_iteration,
-                path=config.parameter.evaluation.model_save_path,
-            )
+    #     if (
+    #         train_iter == 0
+    #         or (train_iter + 1) % config.parameter.evaluation.eval_freq == 0
+    #     ):
+    #         energy_conditioned_diffusion_model.eval()
+    #         for guidance_scale in [0.0]:
+    #             t_span = torch.linspace(0.0, 1.0, 1000)
+    #             x_t = (
+    #                 energy_conditioned_diffusion_model.sample_forward_process(
+    #                     t_span=t_span, batch_size=500, guidance_scale=guidance_scale
+    #                 )
+    #                 .cpu()
+    #                 .detach()
+    #             )
+    #             x_t = [
+    #                 x.squeeze(0)
+    #                 for x in torch.split(x_t, split_size_or_sections=1, dim=0)
+    #             ]
+    #             p = mp.Process(
+    #                 target=render_video,
+    #                 args=(
+    #                     x_t,
+    #                     config.parameter.evaluation.video_save_path,
+    #                     f"diffusion_model_iteration_{diffusion_model_iteration}_value_model_iteration_{value_model_iteration}",
+    #                     guidance_scale,
+    #                     100,
+    #                     100,
+    #                 ),
+    #             )
+    #             p.start()
+    #             subprocess_list.append(p)
+    #         save_checkpoint(
+    #             diffusion_model=energy_conditioned_diffusion_model,
+    #             value_model=value_function_model,
+    #             diffusion_model_iteration=diffusion_model_iteration,
+    #             value_model_iteration=value_model_iteration,
+    #             path=config.parameter.evaluation.model_save_path,
+    #         )
 
-    for p in subprocess_list:
-        p.join()
+    # for p in subprocess_list:
+    #     p.join()
 
-    def generate_fake_x(model, sample_per_data):
-        # model.eval()
-        fake_x_sampled = []
-        for i in track(
-            range(config.parameter.support_size), description="Generate fake x"
-        ):
-            # TODO: mkae it batchsize
+    # def generate_fake_x(model, sample_per_data):
+    #     # model.eval()
+    #     fake_x_sampled = []
+    #     for i in track(
+    #         range(config.parameter.support_size), description="Generate fake x"
+    #     ):
+    #         # TODO: mkae it batchsize
 
-            fake_x_sampled.append(
-                model.sample(
-                    t_span=torch.linspace(0.0, 1.0, 32).to(
-                        config.model.diffusion_model.device
-                    ),
-                    batch_size=sample_per_data,
-                    guidance_scale=0.0,
-                    with_grad=False,
-                )
-            )
+    #         fake_x_sampled.append(
+    #             model.sample(
+    #                 t_span=torch.linspace(0.0, 1.0, 32).to(
+    #                     config.model.diffusion_model.device
+    #                 ),
+    #                 batch_size=sample_per_data,
+    #                 guidance_scale=0.0,
+    #                 with_grad=False,
+    #             )
+    #         )
 
-        fake_x = torch.stack(fake_x_sampled, dim=0)
-        return fake_x
+    #     fake_x = torch.stack(fake_x_sampled, dim=0)
+    #     return fake_x
 
-    fake_x = generate_fake_x(
-        energy_conditioned_diffusion_model, config.parameter.sample_per_data
-    )
+    # fake_x = generate_fake_x(
+    #     energy_conditioned_diffusion_model, config.parameter.sample_per_data
+    # )
 
-    # fake_x
-    data_fake_x = fake_x.detach().cpu().numpy()
+    # # fake_x
+    # data_fake_x = fake_x.detach().cpu().numpy()
 
-    data_loader = torch.utils.data.DataLoader(
-        data, batch_size=config.parameter.value_function_model.batch_size, shuffle=True
-    )
-    data_loader_fake_x = torch.utils.data.DataLoader(
-        data_fake_x,
-        batch_size=config.parameter.energy_guidance.batch_size,
-        shuffle=True,
-    )
-    data_generator = get_train_data(data_loader)
-    data_generator_fake_x = get_train_data(data_loader_fake_x)
+    # data_loader = torch.utils.data.DataLoader(
+    #     data, batch_size=config.parameter.value_function_model.batch_size, shuffle=True
+    # )
+    # data_loader_fake_x = torch.utils.data.DataLoader(
+    #     data_fake_x,
+    #     batch_size=config.parameter.energy_guidance.batch_size,
+    #     shuffle=True,
+    # )
+    # data_generator = get_train_data(data_loader)
+    # data_generator_fake_x = get_train_data(data_loader_fake_x)
 
-    v_optimizer = torch.optim.Adam(
-        value_function_model.v.parameters(),
-        lr=config.parameter.value_function_model.learning_rate,
-    )
+    # v_optimizer = torch.optim.Adam(
+    #     value_function_model.v.parameters(),
+    #     lr=config.parameter.value_function_model.learning_rate,
+    # )
 
-    energy_guidance_optimizer = torch.optim.Adam(
-        energy_conditioned_diffusion_model.energy_guidance.parameters(),
-        lr=config.parameter.energy_guidance.learning_rate,
-    )
+    # energy_guidance_optimizer = torch.optim.Adam(
+    #     energy_conditioned_diffusion_model.energy_guidance.parameters(),
+    #     lr=config.parameter.energy_guidance.learning_rate,
+    # )
 
-    moving_average_v_loss = 0.0
-    moving_average_energy_guidance_loss = 0.0
+    # moving_average_v_loss = 0.0
+    # moving_average_energy_guidance_loss = 0.0
 
-    subprocess_list = []
+    # subprocess_list = []
 
-    with Progress() as progress:
-        value_training = progress.add_task(
-            "Value training",
-            total=config.parameter.value_function_model.stop_training_iterations,
-        )
-        energy_guidance_training = progress.add_task(
-            "Energy guidance training",
-            total=config.parameter.energy_guidance.iterations,
-        )
+    # with Progress() as progress:
+    #     value_training = progress.add_task(
+    #         "Value training",
+    #         total=config.parameter.value_function_model.stop_training_iterations,
+    #     )
+    #     energy_guidance_training = progress.add_task(
+    #         "Energy guidance training",
+    #         total=config.parameter.energy_guidance.iterations,
+    #     )
 
-        for train_iter in range(config.parameter.energy_guidance.iterations):
+    #     for train_iter in range(config.parameter.energy_guidance.iterations):
 
-            if train_iter < value_model_iteration:
-                continue
+    #         if train_iter < value_model_iteration:
+    #             continue
 
-            if train_iter % config.parameter.evaluation.eval_freq == 0:
-                # mesh grid from -10 to 10
-                x = np.linspace(-10, 10, 100)
-                y = np.linspace(-10, 10, 100)
-                grid = np.meshgrid(x, y)
-                grid = np.stack([grid[1], grid[0]], axis=0)
-                grid_tensor = torch.tensor(grid, dtype=torch.float32).to(
-                    config.model.diffusion_model.device
-                )
-                grid_tensor = torch.einsum("dij->ijd", grid_tensor)
+    #         if train_iter % config.parameter.evaluation.eval_freq == 0:
+    #             # mesh grid from -10 to 10
+    #             x = np.linspace(-10, 10, 100)
+    #             y = np.linspace(-10, 10, 100)
+    #             grid = np.meshgrid(x, y)
+    #             grid = np.stack([grid[1], grid[0]], axis=0)
+    #             grid_tensor = torch.tensor(grid, dtype=torch.float32).to(
+    #                 config.model.diffusion_model.device
+    #             )
+    #             grid_tensor = torch.einsum("dij->ijd", grid_tensor)
 
-                # plot value function by imshow
-                grid_value = value_function_model(grid_tensor)
-                # plt.imshow(torch.fliplr(grid_value).detach().cpu().numpy(), extent=(-10, 10, -10, 10))
-                plt.imshow(
-                    grid_value.detach().cpu().numpy(),
-                    extent=(-10, 10, -10, 10),
-                    vmin=-5,
-                    vmax=3,
-                )
-                plt.colorbar()
-                if not os.path.exists(config.parameter.evaluation.video_save_path):
-                    os.makedirs(config.parameter.evaluation.video_save_path)
-                plt.savefig(
-                    os.path.join(
-                        config.parameter.evaluation.video_save_path,
-                        f"iteration_{train_iter}_value_function.png",
-                    )
-                )
-                plt.clf()
+    #             # plot value function by imshow
+    #             grid_value = value_function_model(grid_tensor)
+    #             # plt.imshow(torch.fliplr(grid_value).detach().cpu().numpy(), extent=(-10, 10, -10, 10))
+    #             plt.imshow(
+    #                 grid_value.detach().cpu().numpy(),
+    #                 extent=(-10, 10, -10, 10),
+    #                 vmin=-5,
+    #                 vmax=3,
+    #             )
+    #             plt.colorbar()
+    #             if not os.path.exists(config.parameter.evaluation.video_save_path):
+    #                 os.makedirs(config.parameter.evaluation.video_save_path)
+    #             plt.savefig(
+    #                 os.path.join(
+    #                     config.parameter.evaluation.video_save_path,
+    #                     f"iteration_{train_iter}_value_function.png",
+    #                 )
+    #             )
+    #             plt.clf()
 
-            train_data = next(data_generator).to(config.model.diffusion_model.device)
-            train_x, train_value = train_data[:, :x_size], train_data[:, x_size]
-            train_fake_x = next(data_generator_fake_x).to(
-                config.model.diffusion_model.device
-            )
-            if (
-                train_iter
-                < config.parameter.value_function_model.stop_training_iterations
-            ):
-                v_loss = value_function_model.v_loss(
-                    state=train_x,
-                    value=train_value.unsqueeze(-1),
-                )
+    #         train_data = next(data_generator).to(config.model.diffusion_model.device)
+    #         train_x, train_value = train_data[:, :x_size], train_data[:, x_size]
+    #         train_fake_x = next(data_generator_fake_x).to(
+    #             config.model.diffusion_model.device
+    #         )
+    #         if (
+    #             train_iter
+    #             < config.parameter.value_function_model.stop_training_iterations
+    #         ):
+    #             v_loss = value_function_model.v_loss(
+    #                 state=train_x,
+    #                 value=train_value.unsqueeze(-1),
+    #             )
 
-                v_optimizer.zero_grad()
-                v_loss.backward()
-                v_optimizer.step()
-                moving_average_v_loss = (
-                    0.99 * moving_average_v_loss + 0.01 * v_loss.item()
-                    if train_iter > 0
-                    else v_loss.item()
-                )
-                if train_iter % 100 == 0:
-                    log.info(
-                        f"iteration {train_iter}, value loss {v_loss.item()}, moving average loss {moving_average_v_loss}"
-                    )
+    #             v_optimizer.zero_grad()
+    #             v_loss.backward()
+    #             v_optimizer.step()
+    #             moving_average_v_loss = (
+    #                 0.99 * moving_average_v_loss + 0.01 * v_loss.item()
+    #                 if train_iter > 0
+    #                 else v_loss.item()
+    #             )
+    #             if train_iter % 100 == 0:
+    #                 log.info(
+    #                     f"iteration {train_iter}, value loss {v_loss.item()}, moving average loss {moving_average_v_loss}"
+    #                 )
 
-                # Update target
-                for param, target_param in zip(
-                    value_function_model.v.parameters(),
-                    value_function_model.v_target.parameters(),
-                ):
-                    target_param.data.copy_(
-                        config.parameter.value_function_model.update_momentum
-                        * param.data
-                        + (1 - config.parameter.value_function_model.update_momentum)
-                        * target_param.data
-                    )
+    #             # Update target
+    #             for param, target_param in zip(
+    #                 value_function_model.v.parameters(),
+    #                 value_function_model.v_target.parameters(),
+    #             ):
+    #                 target_param.data.copy_(
+    #                     config.parameter.value_function_model.update_momentum
+    #                     * param.data
+    #                     + (1 - config.parameter.value_function_model.update_momentum)
+    #                     * target_param.data
+    #                 )
 
-                progress.update(value_training, advance=1)
+    #             progress.update(value_training, advance=1)
 
-            energy_guidance_loss = (
-                energy_conditioned_diffusion_model.energy_guidance_loss(
-                    x=train_fake_x,
-                )
-            )
-            energy_guidance_optimizer.zero_grad()
-            energy_guidance_loss.backward()
-            energy_guidance_optimizer.step()
-            moving_average_energy_guidance_loss = (
-                0.99 * moving_average_energy_guidance_loss
-                + 0.01 * energy_guidance_loss.item()
-                if train_iter > 0
-                else energy_guidance_loss.item()
-            )
-            if train_iter % 100 == 0:
-                log.info(
-                    f"iteration {train_iter}, energy guidance loss {energy_guidance_loss.item()}, moving average loss {moving_average_energy_guidance_loss}"
-                )
+    #         energy_guidance_loss = (
+    #             energy_conditioned_diffusion_model.energy_guidance_loss(
+    #                 x=train_fake_x,
+    #             )
+    #         )
+    #         energy_guidance_optimizer.zero_grad()
+    #         energy_guidance_loss.backward()
+    #         energy_guidance_optimizer.step()
+    #         moving_average_energy_guidance_loss = (
+    #             0.99 * moving_average_energy_guidance_loss
+    #             + 0.01 * energy_guidance_loss.item()
+    #             if train_iter > 0
+    #             else energy_guidance_loss.item()
+    #         )
+    #         if train_iter % 100 == 0:
+    #             log.info(
+    #                 f"iteration {train_iter}, energy guidance loss {energy_guidance_loss.item()}, moving average loss {moving_average_energy_guidance_loss}"
+    #             )
 
-            value_model_iteration = train_iter
-            progress.update(energy_guidance_training, advance=1)
+    #         value_model_iteration = train_iter
+    #         progress.update(energy_guidance_training, advance=1)
 
-            if (
-                train_iter == 0
-                or (train_iter + 1) % config.parameter.evaluation.eval_freq == 0
-            ):
-                energy_conditioned_diffusion_model.eval()
-                for guidance_scale in config.parameter.evaluation.guidance_scale:
-                    t_span = torch.linspace(0.0, 1.0, 1000)
-                    x_t = (
-                        energy_conditioned_diffusion_model.sample_forward_process(
-                            t_span=t_span, batch_size=500, guidance_scale=guidance_scale
-                        )
-                        .cpu()
-                        .detach()
-                    )
-                    x_t = [
-                        x.squeeze(0)
-                        for x in torch.split(x_t, split_size_or_sections=1, dim=0)
-                    ]
-                    p = mp.Process(
-                        target=render_video,
-                        args=(
-                            x_t,
-                            config.parameter.evaluation.video_save_path,
-                            f"diffusion_model_iteration_{diffusion_model_iteration}_value_model_iteration_{value_model_iteration}",
-                            guidance_scale,
-                            100,
-                            100,
-                        ),
-                    )
-                    p.start()
-                    subprocess_list.append(p)
+    #         if (
+    #             train_iter == 0
+    #             or (train_iter + 1) % config.parameter.evaluation.eval_freq == 0
+    #         ):
+    #             energy_conditioned_diffusion_model.eval()
+    #             for guidance_scale in config.parameter.evaluation.guidance_scale:
+    #                 t_span = torch.linspace(0.0, 1.0, 1000)
+    #                 x_t = (
+    #                     energy_conditioned_diffusion_model.sample_forward_process(
+    #                         t_span=t_span, batch_size=500, guidance_scale=guidance_scale
+    #                     )
+    #                     .cpu()
+    #                     .detach()
+    #                 )
+    #                 x_t = [
+    #                     x.squeeze(0)
+    #                     for x in torch.split(x_t, split_size_or_sections=1, dim=0)
+    #                 ]
+    #                 p = mp.Process(
+    #                     target=render_video,
+    #                     args=(
+    #                         x_t,
+    #                         config.parameter.evaluation.video_save_path,
+    #                         f"diffusion_model_iteration_{diffusion_model_iteration}_value_model_iteration_{value_model_iteration}",
+    #                         guidance_scale,
+    #                         100,
+    #                         100,
+    #                     ),
+    #                 )
+    #                 p.start()
+    #                 subprocess_list.append(p)
 
-                save_checkpoint(
-                    diffusion_model=energy_conditioned_diffusion_model,
-                    value_model=value_function_model,
-                    diffusion_model_iteration=diffusion_model_iteration,
-                    value_model_iteration=value_model_iteration,
-                    path=config.parameter.evaluation.model_save_path,
-                )
+    #             save_checkpoint(
+    #                 diffusion_model=energy_conditioned_diffusion_model,
+    #                 value_model=value_function_model,
+    #                 diffusion_model_iteration=diffusion_model_iteration,
+    #                 value_model_iteration=value_model_iteration,
+    #                 path=config.parameter.evaluation.model_save_path,
+    #             )
 
-    for p in subprocess_list:
-        p.join()
+    # for p in subprocess_list:
+    #     p.join()
 
 
 def sample_from_energy_conditioned_diffusion_model(
