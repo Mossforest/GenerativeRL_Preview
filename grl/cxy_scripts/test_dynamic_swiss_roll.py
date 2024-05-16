@@ -261,7 +261,7 @@ if __name__ == "__main__":
         n_samples=config.dataset.data_num, noise=config.dataset.noise
     )
     t = x_and_t[1].astype(np.float32)
-    value = ((t - np.min(t)) / (np.max(t) - np.min(t)) - 0.5) * 5 - 4.0
+    t = (t - np.min(t)) / (np.max(t) - np.min(t))   # [0, 1]
     x = x_and_t[0].astype(np.float32)[:, [0, 2]]
     # transform data
     x[:, 0] = x[:, 0] / np.max(np.abs(x[:, 0]))
@@ -270,7 +270,7 @@ if __name__ == "__main__":
     x = x * 10 - 5
 
     # plot data with color of value
-    plt.scatter(x[:, 0], x[:, 1], c=value, vmin=-5, vmax=3)
+    plt.scatter(x[:, 0], x[:, 1], c=t, vmin=-5, vmax=3)
     plt.colorbar()
     if not os.path.exists(config.parameter.evaluation.video_save_path):
         os.makedirs(config.parameter.evaluation.video_save_path)
@@ -280,13 +280,26 @@ if __name__ == "__main__":
         )
     )
     plt.clf()
-
-    # zip x and value
-    data = np.concatenate([x, value[:, None]], axis=1)
     
     # pair the sampled (x, t) 2by2
-    pair_sampled_num = 1e5
+    pair_sampled_num = int(1e5)
+    delta_t_barrie = 0.15
     
+    idx_1 = torch.randint(config.dataset.data_num, (pair_sampled_num,))
+    idx_2 = torch.randint(config.dataset.data_num, (pair_sampled_num,))
+    unfil_x_1 = x[idx_1]
+    unfil_t_1 = t[idx_1]
+    unfil_x_2 = x[idx_2]
+    unfil_t_2 = t[idx_2]
+    unfil_delta_t = unfil_t_1 - unfil_t_2
+    
+    idx_fil = (unfil_delta_t > - delta_t_barrie) & (unfil_delta_t < delta_t_barrie)
+    x_1 = unfil_x_1[idx_fil]
+    x_2 = unfil_x_2[idx_fil]
+    delta_t = unfil_delta_t[idx_fil]
+    
+    data = np.concatenate([x_1, x_2, delta_t[:, None]], axis=1)
+    # array([ 1.7171526 , -0.5514145 ,  1.5585546 ,  0.50061655, -0.06819396], dtype=float32)  ==  [x1, x2, dt]
     
 
     def get_train_data(dataloader):
