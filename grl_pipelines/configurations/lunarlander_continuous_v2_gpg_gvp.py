@@ -140,7 +140,7 @@ config = EasyDict(
                 epochs=500,
                 learning_rate=1e-4,
                 # new add below
-                copy_frome_basemodel=True,
+                copy_from_basemodel=True,
                 lr_decy=False,
                 loss_type="double_minibatch_loss",
                 gradtime_step=1000,
@@ -153,7 +153,7 @@ config = EasyDict(
                 guidance_scale=[0.0, 1.0, 2.0],
             ),
             checkpoint_path=f"./{project_name}/checkpoint",
-            checkpoint_freq=10,
+            checkpoint_freq=100,
         ),
     ),
     deploy=dict(

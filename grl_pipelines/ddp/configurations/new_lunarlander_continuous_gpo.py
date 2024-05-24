@@ -219,7 +219,7 @@ def make_config(device):
                     epochs=1,
                     learning_rate=1e-4,
                     # new add below
-                    copy_frome_basemodel=True,
+                    copy_from_basemodel=True,
                     loss_type="double_minibatch_loss",  # if not gpg,it don' work
                     grad_norm_clip=10.0,
                     lr_decy=False,
@@ -231,7 +231,7 @@ def make_config(device):
                     guidance_scale=[0.0, 1.0, 2.0],
                 ),
                 checkpoint_path=f"./{project_name}/checkpoint",
-                checkpoint_freq=10,
+                checkpoint_freq=100,
             ),
         ),
         deploy=dict(

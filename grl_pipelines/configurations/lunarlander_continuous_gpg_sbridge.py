@@ -218,7 +218,7 @@ config = EasyDict(
                 update_momentum=0.005,
             ),
             guided_policy=dict(
-                copy_frome_basemodel=True,
+                copy_from_basemodel=True,
                 batch_size=2048,
                 epochs=500,
                 learning_rate=1e-4,
@@ -228,7 +228,7 @@ config = EasyDict(
                 guidance_scale=[0.0, 1.0, 2.0],
             ),
             checkpoint_path=f"./{project_name}/checkpoint",
-            checkpoint_freq=10,
+            checkpoint_freq=100,
         ),
     ),
     deploy=dict(
