@@ -25,6 +25,8 @@ class SDE:
         self,
         drift: Union[nn.Module, Callable] = None,
         diffusion: Union[nn.Module, Callable] = None,
+        script: Union[nn.Module, Callable] = None,
     ):
         self.drift = drift
         self.diffusion = diffusion
+        self.script = script

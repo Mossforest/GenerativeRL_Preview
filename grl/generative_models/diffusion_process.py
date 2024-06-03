@@ -749,6 +749,7 @@ class DiffusionProcess:
         reverse_diffusion_squared_function: Union[Callable, nn.Module] = None,
         condition: Union[torch.Tensor, TensorDict] = None,
         T: torch.Tensor = torch.tensor(1.0),
+        reverse_script_function: torch.Tensor = None, 
     ) -> SDE:
         """
         Overview:
@@ -846,6 +847,31 @@ class DiffusionProcess:
                 return reverse_diffusion_function(T - t, x, condition)
 
             return SDE(drift=reverse_sde_drift, diffusion=reverse_sde_diffusion)
+
+        if function_type == "score_script_function":
+
+            def reverse_sde_drift(
+                t: torch.Tensor,
+                x: Union[torch.Tensor, TensorDict, treetensor.torch.Tensor],
+            ) -> Union[torch.Tensor, TensorDict, treetensor.torch.Tensor]:
+                return -self.drift(T - t, x, condition) + 0.5 * (
+                    self.diffusion_squared(T - t, x, condition)
+                    + reverse_diffusion_squared_function(T - t, x, condition)
+                ) * function(T - t, x, condition)
+
+            def reverse_sde_diffusion(
+                t: torch.Tensor,
+                x: Union[torch.Tensor, TensorDict, treetensor.torch.Tensor],
+            ) -> Union[torch.Tensor, TensorDict, treetensor.torch.Tensor]:
+                return reverse_diffusion_function(T - t, x, condition)
+
+            def reverse_sde_script(
+                t: torch.Tensor,
+                s: Union[torch.Tensor, TensorDict, treetensor.torch.Tensor],
+            ) -> Union[torch.Tensor, TensorDict, treetensor.torch.Tensor]:
+                return reverse_diffusion_function(T - t, s, condition)
+
+            return SDE(drift=reverse_sde_drift, diffusion=reverse_sde_diffusion, script=reverse_sde_script)
 
         else:
             raise NotImplementedError(

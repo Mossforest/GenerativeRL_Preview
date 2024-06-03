@@ -225,7 +225,7 @@ class GaussianConditionalProbabilityPath:
                 torch.sin(torch.pi * t * 0.5)
                 * torch.sin(torch.pi * t * 0.5)
                 * torch.tan(torch.pi * t * 0.5)
-            )
+            ) 
             return first + second
         else:
             raise NotImplementedError(

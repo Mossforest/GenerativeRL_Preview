@@ -2,6 +2,8 @@ import multiprocessing as mp
 import os
 import signal
 import sys
+import wandb
+import datetime
 
 import matplotlib
 import numpy as np
@@ -15,14 +17,14 @@ import torch
 from easydict import EasyDict
 from matplotlib import animation
 
-from grl.generative_models.diffusion_model.energy_conditional_diffusion_model import (
-    EnergyConditionalDiffusionModel,
-)
-from grl.rl_modules.value_network.one_shot_value_function import OneShotValueFunction
+from grl.generative_models.diffusion_model.dynamic_diffusion_model import DynamicDiffusionModel
+from grl.cxy_models.classifier import Classifier
 from grl.utils import set_seed
 from grl.utils.log import log
 
 x_size = 2
+
+project = "test_dynamic_swiss_roll"
 
 device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 t_embedding_dim = 32
@@ -35,7 +37,7 @@ t_encoder = dict(
 )
 data_num = 10000
 config = EasyDict(
-    project="test_dynamic_swiss_roll",
+    project=project,
     dataset=dict(
         data_num=data_num,
         noise=0.6,
@@ -56,7 +58,7 @@ config = EasyDict(
                     ),
                 ),
                 backbone=dict(
-                    type="ConcatenateMLP",
+                    type="DynamicDiT_1D",
                     args=dict(
                         hidden_sizes=[128 * x_size, 256, 256],
                         output_size=1,
@@ -70,18 +72,19 @@ config = EasyDict(
             x_size=x_size,
             alpha=1.0,
             solver=dict(
-                type="ODESolver",
+                type="SDESolver",
                 args=dict(
                     library="torchdyn",
+                        sde_solver="euler_script",
                 ),
             ),
             path=dict(
-                type="linear_vp_sde",
+                type="gvp", # linear_vp_sde
                 beta_0=0.1,
                 beta_1=20.0,
             ),
             model=dict(
-                type="noise_function",
+                type="score_script_function",
                 args=dict(
                     t_encoder=t_encoder,
                     backbone=dict(
@@ -94,39 +97,18 @@ config = EasyDict(
                     ),
                 ),
             ),
-            energy_guidance=dict(
-                t_encoder=t_encoder,
-                backbone=dict(
-                    type="ConcatenateMLP",
-                    args=dict(
-                        hidden_sizes=[x_size + t_embedding_dim, 256, 256],
-                        output_size=1,
-                        activation="silu",
-                    ),
-                ),
-            ),
         ),
     ),
     parameter=dict(
-        unconditional_model=dict(
-            batch_size=2048,
-            learning_rate=5e-5,
-            iterations=50000,
-        ),
+        training_loss_type = "score_matching",
+        batch_size=2048,
+        learning_rate=5e-5,
+        iterations=50000,
         support_size=data_num,
         sample_per_data=100,
-        value_function_model=dict(
-            batch_size=256,
-            stop_training_iterations=50000,
-            learning_rate=5e-4,
-            discount_factor=0.99,
-            update_momentum=0.995,
-        ),
-        energy_guidance=dict(
-            batch_size=256,
-            iterations=100000,
-            learning_rate=5e-4,
-        ),
+        discount_factor=0.99,
+        discount_factor=0.99,
+        update_momentum=0.995,
         evaluation=dict(
             eval_freq=5000,
             video_save_path="./video-swiss-roll-energy-conditioned-diffusion-model",
@@ -196,65 +178,11 @@ def save_checkpoint(
     )
 
 
-if __name__ == "__main__":
+def main(wandb_run):
     seed_value = set_seed()
     log.info(f"start exp with seed value {seed_value}.")
-
-    # value_function_model = OneShotValueFunction(config.model.value_function_model).to(
-    #     config.model.value_function_model.device
-    # )
-    # energy_conditioned_diffusion_model = EnergyConditionalDiffusionModel(
-    #     config.model.diffusion_model, energy_model=value_function_model
-    # ).to(config.model.diffusion_model.device)
-
-    # value_function_model = torch.compile(value_function_model)
-    # energy_conditioned_diffusion_model = torch.compile(
-    #     energy_conditioned_diffusion_model
-    # )
-
-    # if config.parameter.evaluation.model_save_path is not None:
-
-    #     if not os.path.exists(config.parameter.evaluation.model_save_path):
-    #         log.warning(
-    #             f"Checkpoint path {config.parameter.evaluation.model_save_path} does not exist"
-    #         )
-    #         diffusion_model_iteration = 0
-    #         value_model_iteration = 0
-    #     else:
-    #         checkpoint_files = [
-    #             f
-    #             for f in os.listdir(config.parameter.evaluation.model_save_path)
-    #             if f.endswith(".pt")
-    #         ]
-    #         if len(checkpoint_files) == 0:
-    #             log.warning(
-    #                 f"No checkpoint files found in {config.parameter.evaluation.model_save_path}"
-    #             )
-    #             diffusion_model_iteration = 0
-    #             value_model_iteration = 0
-    #         else:
-    #             checkpoint_files = sorted(
-    #                 checkpoint_files, key=lambda x: int(x.split("_")[-1].split(".")[0])
-    #             )
-    #             checkpoint = torch.load(
-    #                 os.path.join(
-    #                     config.parameter.evaluation.model_save_path,
-    #                     checkpoint_files[-1],
-    #                 ),
-    #                 map_location="cpu",
-    #             )
-    #             energy_conditioned_diffusion_model.load_state_dict(
-    #                 checkpoint["diffusion_model"]
-    #             )
-    #             value_function_model.load_state_dict(checkpoint["value_model"])
-    #             diffusion_model_iteration = checkpoint.get(
-    #                 "diffusion_model_iteration", 0
-    #             )
-    #             value_model_iteration = checkpoint.get("value_model_iteration", 0)
-
-    # else:
-    #     diffusion_model_iteration = 0
-    #     value_model_iteration = 0
+    
+    # ! get data !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     # get data
     x_and_t = make_swiss_roll(
@@ -298,10 +226,12 @@ if __name__ == "__main__":
     x_2 = unfil_x_2[idx_fil]
     delta_t = unfil_delta_t[idx_fil]
     
+    # TODO: distributed stochastic rule
+    
     data = np.concatenate([x_1, x_2, delta_t[:, None]], axis=1)
     # array([ 1.7171526 , -0.5514145 ,  1.5585546 ,  0.50061655, -0.06819396], dtype=float32)  ==  [x1, x2, dt]
     
-
+    
     def get_train_data(dataloader):
         while True:
             yield from dataloader
@@ -313,84 +243,123 @@ if __name__ == "__main__":
     
     
     
+    # ! build model !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    diffusion_model = DynamicDiffusionModel(config=config.diffusion_model).to(config.diffusion_model.device)
+    wandb_run.watch(diffusion_model, log='all')
 
-    # unconditional_model_optimizer = torch.optim.Adam(
-    #     energy_conditioned_diffusion_model.model.parameters(),
-    #     lr=config.parameter.unconditional_model.learning_rate,
-    # )
+    if config.parameter.evaluation.model_save_path is not None:
+        if not os.path.exists(config.parameter.evaluation.model_save_path):
+            log.warning(
+                f"Checkpoint path {config.parameter.evaluation.model_save_path} does not exist"
+            )
+            diffusion_model_iteration = 0
+            value_model_iteration = 0
+        else:
+            checkpoint_files = [
+                f
+                for f in os.listdir(config.parameter.evaluation.model_save_path)
+                if f.endswith(".pt")
+            ]
+            if len(checkpoint_files) == 0:
+                log.warning(
+                    f"No checkpoint files found in {config.parameter.evaluation.model_save_path}"
+                )
+                diffusion_model_iteration = 0
+                value_model_iteration = 0
+            else:
+                checkpoint_files = sorted(
+                    checkpoint_files, key=lambda x: int(x.split("_")[-1].split(".")[0])
+                )
+                checkpoint = torch.load(
+                    os.path.join(
+                        config.parameter.evaluation.model_save_path,
+                        checkpoint_files[-1],
+                    ),
+                    map_location="cpu",
+                )
+                diffusion_model.load_state_dict(checkpoint["diffusion_model"])
+                diffusion_model_iteration = checkpoint.get("diffusion_model_iteration", 0)
 
-    # moving_average_loss = 0.0
+    else:
+        diffusion_model_iteration = 0
+        value_model_iteration = 0
+    
+    # optim
+    diffusion_optimizer = torch.optim.Adam(
+        diffusion_model.model.parameters(),
+        lr=config.parameter.unconditional_model.learning_rate,
+    )
+    
 
-    # subprocess_list = []
 
-    # for train_iter in track(
-    #     range(config.parameter.unconditional_model.iterations),
-    #     description="unconditional_model training",
-    # ):
-    #     if train_iter < diffusion_model_iteration:
-    #         continue
+    moving_average_loss = 0.0
 
-    #     train_data = next(data_generator).to(config.model.diffusion_model.device)
-    #     train_x, train_value = train_data[:, :x_size], train_data[:, x_size]
-    #     unconditional_model_training_loss = (
-    #         energy_conditioned_diffusion_model.score_matching_loss(train_x)
-    #     )
-    #     unconditional_model_optimizer.zero_grad()
-    #     unconditional_model_training_loss.backward()
-    #     unconditional_model_optimizer.step()
-    #     moving_average_loss = (
-    #         0.99 * moving_average_loss + 0.01 * unconditional_model_training_loss.item()
-    #         if train_iter > 0
-    #         else unconditional_model_training_loss.item()
-    #     )
-    #     if train_iter % 100 == 0:
-    #         log.info(
-    #             f"iteration {train_iter}, unconditional model loss {unconditional_model_training_loss.item()}, moving average loss {moving_average_loss}"
-    #         )
+    subprocess_list = []
 
-    #     diffusion_model_iteration = train_iter
+    for train_iter in track(
+        range(config.parameter.unconditional_model.iterations),
+        description="unconditional_model training",
+    ):
+        if train_iter < diffusion_model_iteration:
+            continue
 
-    #     if (
-    #         train_iter == 0
-    #         or (train_iter + 1) % config.parameter.evaluation.eval_freq == 0
-    #     ):
-    #         energy_conditioned_diffusion_model.eval()
-    #         for guidance_scale in [0.0]:
-    #             t_span = torch.linspace(0.0, 1.0, 1000)
-    #             x_t = (
-    #                 energy_conditioned_diffusion_model.sample_forward_process(
-    #                     t_span=t_span, batch_size=500, guidance_scale=guidance_scale
-    #                 )
-    #                 .cpu()
-    #                 .detach()
-    #             )
-    #             x_t = [
-    #                 x.squeeze(0)
-    #                 for x in torch.split(x_t, split_size_or_sections=1, dim=0)
-    #             ]
-    #             p = mp.Process(
-    #                 target=render_video,
-    #                 args=(
-    #                     x_t,
-    #                     config.parameter.evaluation.video_save_path,
-    #                     f"diffusion_model_iteration_{diffusion_model_iteration}_value_model_iteration_{value_model_iteration}",
-    #                     guidance_scale,
-    #                     100,
-    #                     100,
-    #                 ),
-    #             )
-    #             p.start()
-    #             subprocess_list.append(p)
-    #         save_checkpoint(
-    #             diffusion_model=energy_conditioned_diffusion_model,
-    #             value_model=value_function_model,
-    #             diffusion_model_iteration=diffusion_model_iteration,
-    #             value_model_iteration=value_model_iteration,
-    #             path=config.parameter.evaluation.model_save_path,
-    #         )
+        train_data = next(data_generator).to(config.model.diffusion_model.device)
+        train_x, train_value = train_data[:, :x_size], train_data[:, x_size]
+        diffusion_training_loss = (
+            diffusion_model.score_matching_loss(train_x)
+        )
+        diffusion_optimizer.zero_grad()
+        diffusion_training_loss.backward()
+        moving_average_loss = (
+            0.99 * moving_average_loss + 0.01 * diffusion_training_loss.item()
+            if train_iter > 0
+            else diffusion_training_loss.item()
+        )
+        if train_iter % 100 == 0:
+            log.info(
+                f"iteration {train_iter}, unconditional model loss {diffusion_training_loss.item()}, moving average loss {moving_average_loss}"
+            )
 
-    # for p in subprocess_list:
-    #     p.join()
+        diffusion_model_iteration = train_iter
+
+        if (
+            train_iter == 0
+            or (train_iter + 1) % config.parameter.evaluation.eval_freq == 0
+        ):
+            for guidance_scale in [0.0]:
+                t_span = torch.linspace(0.0, 1.0, 1000)
+                x_t = (
+                    diffusion_model.sample_forward_process(
+                        t_span=t_span, batch_size=500, guidance_scale=guidance_scale
+                    )
+                    .cpu()
+                    .detach()
+                )
+                x_t = [
+                    x.squeeze(0)
+                    for x in torch.split(x_t, split_size_or_sections=1, dim=0)
+                ]
+                p = mp.Process(
+                    target=render_video,
+                    args=(
+                        x_t,
+                        config.parameter.evaluation.video_save_path,
+                        f"diffusion_model_iteration_{diffusion_model_iteration}_value_model_iteration_{value_model_iteration}",
+                        guidance_scale,
+                        100,
+                        100,
+                    ),
+                )
+                p.start()
+                subprocess_list.append(p)
+            save_checkpoint(
+                diffusion_model=diffusion_model,
+                diffusion_model_iteration=diffusion_model_iteration,
+                path=config.parameter.evaluation.model_save_path,
+            )
+
+    for p in subprocess_list:
+        p.join()
 
     # def generate_fake_x(model, sample_per_data):
     #     # model.eval()
@@ -415,7 +384,7 @@ if __name__ == "__main__":
     #     return fake_x
 
     # fake_x = generate_fake_x(
-    #     energy_conditioned_diffusion_model, config.parameter.sample_per_data
+    #     diffusion_model, config.parameter.sample_per_data
     # )
 
     # # fake_x
@@ -432,10 +401,6 @@ if __name__ == "__main__":
     # data_generator = get_train_data(data_loader)
     # data_generator_fake_x = get_train_data(data_loader_fake_x)
 
-    # v_optimizer = torch.optim.Adam(
-    #     value_function_model.v.parameters(),
-    #     lr=config.parameter.value_function_model.learning_rate,
-    # )
 
     # energy_guidance_optimizer = torch.optim.Adam(
     #     energy_conditioned_diffusion_model.energy_guidance.parameters(),
@@ -600,14 +565,14 @@ if __name__ == "__main__":
     #     p.join()
 
 
-def sample_from_energy_conditioned_diffusion_model(
-    energy_conditioned_diffusion_model, batch_size=500, guidance_scale=1.0
-):
-    t_span = torch.linspace(0.0, 1.0, 1000)
-    x_t = (
-        energy_conditioned_diffusion_model.sample(
-            t_span=t_span, batch_size=batch_size, guidance_scale=guidance_scale
-        )
-        .cpu()
-        .detach()
-    )
+if __name__ == '__main__':
+    with wandb.init(
+            project="test_swiss_roll_1",
+            config=config,
+    ) as wandb_run:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        config = EasyDict(wandb.config)
+        wandb.run.name = project
+        wandb.run.save()
+        
+        main(wandb_run)
