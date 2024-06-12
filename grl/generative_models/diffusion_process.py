@@ -73,6 +73,53 @@ class DiffusionProcess:
             raise NotImplementedError("Not implemented yet")
         else:
             raise ValueError("Invalid type of x: {}".format(type(x)))
+    
+    def draft(
+        self,
+        t: torch.Tensor,
+        x: Union[torch.Tensor, TensorDict, treetensor.torch.Tensor],
+        draft_x: Union[torch.Tensor, TensorDict] = None,
+        condition: Union[torch.Tensor, TensorDict] = None,
+    ) -> Union[torch.Tensor, TensorDict, treetensor.torch.Tensor]:
+        """
+        Overview:
+            Return the drift term of the diffusion process.
+            The drift term is given by the following:
+
+            .. math::
+                f(x,t)
+
+        Arguments:
+            t (:obj:`torch.Tensor`): The input time.
+            x (:obj:`Union[torch.Tensor, TensorDict]`): The input state.
+            condition (:obj:`Union[torch.Tensor, TensorDict]`): The input condition.
+        Returns:
+            drift (:obj:`Union[torch.Tensor, TensorDict]`): The output drift term.
+        """
+        # TODO
+        
+        # if isinstance(x, torch.Tensor):
+        #     if len(x.shape) > len(t.shape):
+        #         return x * self.path.drift_coefficient(t)[
+        #             (...,) + (None,) * (len(x.shape) - len(t.shape))
+        #         ].expand(x.shape)
+        #     else:
+        #         return x * self.path.drift_coefficient(t)
+        # elif isinstance(x, treetensor.torch.Tensor):
+        #     drift = treetensor.torch.Tensor({}, device=t.device)
+        #     for key, value in x.items():
+        #         if len(value.shape) > len(t.shape):
+        #             drift[key] = value * self.path.drift_coefficient(t)[
+        #                 (...,) + (None,) * (len(value.shape) - len(t.shape))
+        #             ].expand(value.shape)
+        #         else:
+        #             drift[key] = value * self.path.drift_coefficient(t)
+        #     return drift
+        # elif isinstance(x, TensorDict):
+        #     raise NotImplementedError("Not implemented yet")
+        # else:
+        #     raise ValueError("Invalid type of x: {}".format(type(x)))
+        pass
 
     def drift_coefficient(
         self,
@@ -249,6 +296,52 @@ class DiffusionProcess:
             raise NotImplementedError("Not implemented yet")
         else:
             raise ValueError("Invalid type of x: {}".format(type(x)))
+
+    def draft_scale(
+        self,
+        t: torch.Tensor,
+        x: Union[torch.Tensor, TensorDict, treetensor.torch.Tensor] = None,
+        condition: Union[torch.Tensor, TensorDict] = None,
+    ) -> Union[torch.Tensor, TensorDict, treetensor.torch.Tensor]:
+        """
+        Overview:
+            Return the scale of the diffusion process.
+            The scale is given by the following:
+
+            .. math::
+                s(t)
+
+        Arguments:
+            t (:obj:`torch.Tensor`): The input time.
+            x (:obj:`Union[torch.Tensor, TensorDict]`): The input state.
+            condition (:obj:`Union[torch.Tensor, TensorDict]`): The input condition.
+        Returns:
+            scale (:obj:`Union[torch.Tensor, TensorDict]`): The output scale.
+        """
+
+        # TODO
+        # if isinstance(x, torch.Tensor) or x is None:
+        #     if x is not None and len(x.shape) > len(t.shape):
+        #         return self.path.scale(t)[
+        #             (...,) + (None,) * (len(x.shape) - len(t.shape))
+        #         ].expand(x.shape)
+        #     else:
+        #         return self.path.scale(t)
+        # elif isinstance(x, treetensor.torch.Tensor):
+        #     scale = treetensor.torch.Tensor({}, device=t.device)
+        #     for key, value in x.items():
+        #         if len(value.shape) > len(t.shape):
+        #             scale[key] = self.path.scale(t)[
+        #                 (...,) + (None,) * (len(value.shape) - len(t.shape))
+        #             ].expand(value.shape)
+        #         else:
+        #             scale[key] = self.path.scale(t)
+        #     return scale
+        # elif isinstance(x, TensorDict):
+        #     raise NotImplementedError("Not implemented yet")
+        # else:
+        #     raise ValueError("Invalid type of x: {}".format(type(x)))
+        pass
 
     def log_scale(
         self,
@@ -747,8 +840,10 @@ class DiffusionProcess:
         function_type: str,
         reverse_diffusion_function: Union[Callable, nn.Module] = None,
         reverse_diffusion_squared_function: Union[Callable, nn.Module] = None,
+        draft_x: Union[torch.Tensor, TensorDict] = None,
         condition: Union[torch.Tensor, TensorDict] = None,
         T: torch.Tensor = torch.tensor(1.0),
+        reverse_draft_function: torch.Tensor = None, 
     ) -> SDE:
         """
         Overview:
@@ -846,6 +941,35 @@ class DiffusionProcess:
                 return reverse_diffusion_function(T - t, x, condition)
 
             return SDE(drift=reverse_sde_drift, diffusion=reverse_sde_diffusion)
+
+        if function_type == "score_draft_function":
+
+            def reverse_sde_drift(
+                t: torch.Tensor,
+                x: Union[torch.Tensor, TensorDict, treetensor.torch.Tensor],
+            ) -> Union[torch.Tensor, TensorDict, treetensor.torch.Tensor]:
+                # TODO: dx = f(x, t)dt + h(d, t)dt + g(t)dw
+                return -self.drift(T - t, x, condition) + 0.5 * (
+                    self.diffusion_squared(T - t, x, condition)
+                    + reverse_diffusion_squared_function(T - t, x, condition)
+                ) * function(T - t, x, condition)
+
+            def reverse_sde_diffusion(
+                t: torch.Tensor,
+                x: Union[torch.Tensor, TensorDict, treetensor.torch.Tensor],
+            ) -> Union[torch.Tensor, TensorDict, treetensor.torch.Tensor]:
+                # TODO: dx = f(x, t)dt + h(d, t)dt + g(t)dw
+                return reverse_diffusion_function(T - t, x, condition)
+
+            def reverse_sde_draft(
+                t: torch.Tensor,
+                s: Union[torch.Tensor, TensorDict, treetensor.torch.Tensor],
+            ) -> Union[torch.Tensor, TensorDict, treetensor.torch.Tensor]:
+                # TODO: dx = f(x, t)dt + h(d, t)dt + g(t)dw
+                # !: make sure here the draft_x is a [Batch Tensor], where if SDE didnt support batch-include, [[[make draft_x also an input item]]]
+                return reverse_draft_function(T - t, s, draft_x, condition)
+
+            return SDE(drift=reverse_sde_drift, diffusion=reverse_sde_diffusion, draft=reverse_sde_draft)
 
         else:
             raise NotImplementedError(
