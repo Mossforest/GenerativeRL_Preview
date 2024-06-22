@@ -71,6 +71,7 @@ class ScoreDraftFunction:
         gaussian_generator: Callable = None,
         weighting_scheme: str = None,
         average: bool = True,
+        stage: int = 3,
     ) -> torch.Tensor:
         """
         Overview:
@@ -171,7 +172,7 @@ class ScoreDraftFunction:
             else:
                 raise NotImplementedError("Unknown type of noise_value {}".format(type))
 
-        if self.model_type == "score_function":
+        if self.model_type == "score_draft_function":
             batch_size, device = get_batch_size_and_device(x)
             t_random = get_random_t_samples(batch_size, device)
             if gaussian_generator is None:
@@ -180,8 +181,12 @@ class ScoreDraftFunction:
                 noise = gaussian_generator(batch_size)
             std = self.process.std(t_random, x)
             # TODO: no weight first
-            beta_t = self.process.draft_scale(t_random)  #  * classifier_weight
-            x_t = self.process.scale(t_random, x) * (beta_t * x + (1 - beta_t) * draft_x) + std * noise
+            if stage == 3:
+                beta_t = self.process.draft_scale(t_random)  #  * classifier_weight
+                x_t = self.process.scale(t_random, x) * (beta_t * x + (1 - beta_t) * draft_x) + std * noise
+            else:
+                breakpoint()
+                x_t = self.process.scale(t_random, x) * x + std * noise
             
             score_value = model(t_random, x_t, condition=condition)
             loss = get_loss(score_value * std, noise)

@@ -47,6 +47,7 @@ class DynamicDiffusionModel(nn.Module):
 
         self.x_size = config.x_size
         self.device = config.device
+        self.stage = config.stage
 
         self.gaussian_generator = gaussian_random_variable(
             config.x_size,
@@ -54,22 +55,43 @@ class DynamicDiffusionModel(nn.Module):
             config.use_tree_tensor if hasattr(config, "use_tree_tensor") else False,
         )
 
-        self.path = GaussianConditionalProbabilityPath(config.path)
-        if hasattr(config, "reverse_path"):
-            self.reverse_path = GaussianConditionalProbabilityPath(config.reverse_path)
-        else:
-            self.reverse_path = None
-        self.model_type = config.model.type
-        assert self.model_type in [
-            "score_function",
-        ], "Unknown type of model {}".format(self.model_type)
-        self.model = IntrinsicModel(config.model.args)
-        self.diffusion_process = DiffusionProcess(self.path)
-        if self.reverse_path is not None:
-            self.reverse_diffusion_process = DiffusionProcess(self.reverse_path)
-        else:
-            self.reverse_diffusion_process = None
-        self.score_function_ = ScoreDraftFunction(self.model_type, self.diffusion_process)
+        if self.stage == 3:
+            self.path = GaussianConditionalProbabilityPath(config.path)
+            # TODO: if need a specific path for ScoreDraftMatching, generate a completely new one (with drift & diffusion)
+            if hasattr(config, "reverse_path"):
+                self.reverse_path = GaussianConditionalProbabilityPath(config.reverse_path)
+            else:
+                self.reverse_path = None
+            self.model_type = config.model.type
+            assert self.model_type in [
+                "score_draft_function",
+            ], "Unknown type of model {}".format(self.model_type)
+            self.model = IntrinsicModel(config.model.args)
+            # TODO: if need a specific path for ScoreDraftMatching, generate a completely new one (with drift & diffusion)
+            self.diffusion_process = DiffusionProcess(self.path)
+            if self.reverse_path is not None:
+                self.reverse_diffusion_process = DiffusionProcess(self.reverse_path)
+            else:
+                self.reverse_diffusion_process = None
+            self.score_function_ = ScoreDraftFunction(self.model_type, self.diffusion_process)
+        
+        elif self.stage == 1:
+            self.path = GaussianConditionalProbabilityPath(config.path)
+            if hasattr(config, "reverse_path"):
+                self.reverse_path = GaussianConditionalProbabilityPath(config.reverse_path)
+            else:
+                self.reverse_path = None
+            self.model_type = config.model.type
+            assert self.model_type in [
+                "score_draft_function",
+            ], "Unknown type of model {}".format(self.model_type)
+            self.model = IntrinsicModel(config.model.args)
+            self.diffusion_process = DiffusionProcess(self.path)
+            if self.reverse_path is not None:
+                self.reverse_diffusion_process = DiffusionProcess(self.reverse_path)
+            else:
+                self.reverse_diffusion_process = None
+            self.score_function_ = ScoreDraftFunction(self.model_type, self.diffusion_process)
 
         if hasattr(config, "solver"):
             self.solver = get_solver(config.solver.type)(**config.solver.args)
@@ -170,10 +192,11 @@ class DynamicDiffusionModel(nn.Module):
             else:
                 assert False, "Invalid batch size"
         
-        assert (
-            draft_x.shape[0] == condition.shape[0]
-        ), "The batch size of draft_x and condition must be the same"
-        data_batch_size = draft_x.shape[0]
+        if draft_x is not None:
+            assert (
+                draft_x.shape[0] == condition.shape[0]
+            ), "The batch size of draft_x and condition must be the same"
+            data_batch_size = draft_x.shape[0]
 
         if solver_config is not None:
             solver = get_solver(solver_config.type)(**solver_config.args)
@@ -194,7 +217,7 @@ class DynamicDiffusionModel(nn.Module):
         )
         # condition.shape = (B*N, D)
 
-        if isinstance(solver, SDEDraftSolver):
+        if isinstance(solver, SDEDraftSolver) and self.stage == 3:
             assert (
                 self.reverse_diffusion_process is not None
             ), "reverse_path must be specified in config"
@@ -224,6 +247,37 @@ class DynamicDiffusionModel(nn.Module):
                     data = solver.integrate(
                         drift=sde.drift,
                         draft=sde.draft,
+                        diffusion=sde.diffusion,
+                        x0=x,
+                        t_span=t_span,
+                    )
+        
+        elif isinstance(solver, SDEDraftSolver) and self.stage == 1:
+            assert (
+                self.reverse_diffusion_process is not None
+            ), "reverse_path must be specified in config"
+            if not hasattr(self, "t_span"):
+                self.t_span = torch.linspace(0, self.diffusion_process.t_max, 2).to(
+                    self.device
+                )
+            sde = self.diffusion_process.reverse_sde(
+                function=self.model,
+                function_type=self.model_type,
+                condition=condition,
+                reverse_diffusion_function=self.reverse_diffusion_process.diffusion,
+                reverse_diffusion_squared_function=self.reverse_diffusion_process.diffusion_squared,
+            )
+            if with_grad:
+                data = solver.integrate(
+                    drift=sde.drift,
+                    diffusion=sde.diffusion,
+                    x0=x,
+                    t_span=t_span,
+                )
+            else:
+                with torch.no_grad():
+                    data = solver.integrate(
+                        drift=sde.drift,
                         diffusion=sde.diffusion,
                         x0=x,
                         t_span=t_span,
@@ -342,6 +396,6 @@ class DynamicDiffusionModel(nn.Module):
         """
 
         score_loss = self.score_function_.score_matching_loss(
-            self.model, x, draft_x, condition, classifier_weight, self.gaussian_generator, average
+            self.model, x, draft_x, condition, classifier_weight, self.gaussian_generator, average=average, stage=self.stage
         )
         return score_loss

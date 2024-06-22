@@ -32,7 +32,7 @@ from grl.neural_network.encoders import ExponentialFourierProjectionTimeEncoder
 from grl.neural_network.transformers.dit import DiTBlock, FinalLayer, get_2d_sincos_pos_embed
 
 from grl.cxy_models.diffusion import DiT_Special
-from grl.cxy_models.datasets import MetadriveDataset, get_dataset
+from grl.datasets.metadrive_dataset import MetadriveDataset, get_dataset
 
 project="test_dynamic_v2_1"
 
