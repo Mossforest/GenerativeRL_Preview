@@ -25,12 +25,13 @@ from grl.generative_models.metric import compute_likelihood
 from grl.utils import set_seed
 from grl.utils.log import log
 
-exp_name = "swiss-roll-nongen-varying-world-model-noise"
+exp_name = "swiss-roll-nongen-varying-world-model-mlpencoder"
 
 x_size = 2
 condition_size=3
 device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 t_embedding_dim = 32
+condition_dim=256
 data_num=100000
 config = EasyDict(
     dict(
@@ -54,11 +55,11 @@ config = EasyDict(
                 ),
             ),
             condition_encoder = dict(
-                type="GaussianFourierProjectionEncoder",
+                type="MLPEncoder",
                 args=dict(
-                    embed_dim=t_embedding_dim, # after flatten, 32*3=96
-                    x_shape=(condition_size,),
-                    scale=30.0,
+                    hidden_sizes=[condition_size] + [condition_dim] * 2,
+                    output_size=condition_dim,
+                    activation='relu',
                 ),
             ),
             backbone=dict(
@@ -67,7 +68,7 @@ config = EasyDict(
                     hidden_sizes=[512, 256, 128],
                     output_dim=x_size,
                     t_dim=t_embedding_dim,
-                    condition_dim=t_embedding_dim*condition_size,
+                    condition_dim=condition_dim,
                     condition_hidden_dim=64,
                     t_condition_hidden_dim=128,
                 ),

@@ -1,8 +1,10 @@
 import math
+from typing import Callable, List, Optional, Union
 
 import numpy as np
 import torch
 import torch.nn as nn
+from grl.neural_network.activation import get_activation
 
 
 def get_encoder(type: str):
@@ -229,9 +231,73 @@ class SinusoidalPosEmb(nn.Module):
         return emb
 
 
+class MLPEncoder(nn.Module):
+    # ./grl/neural_network/__init__.py#L365
+
+    def __init__(
+        self,
+        hidden_sizes: List[int],
+        output_size: int,
+        activation: Union[str, List[str]],
+        dropout: float = None,
+        layernorm: bool = False,
+        final_activation: str = None,
+        scale: float = None,
+        shrink: float = None,
+    ):
+        super().__init__()
+
+        self.model = nn.Sequential()
+
+        for i in range(len(hidden_sizes) - 1):
+            self.model.add_module(
+                "linear" + str(i), nn.Linear(hidden_sizes[i], hidden_sizes[i + 1])
+            )
+
+            if isinstance(activation, list):
+                self.model.add_module(
+                    "activation" + str(i), get_activation(activation[i])
+                )
+            else:
+                self.model.add_module("activation" + str(i), get_activation(activation))
+            if dropout is not None and dropout > 0:
+                self.model.add_module("dropout", nn.Dropout(dropout))
+            if layernorm:
+                self.model.add_module("layernorm", nn.LayerNorm(hidden_sizes[i + 1]))
+
+        self.model.add_module(
+            "linear" + str(len(hidden_sizes) - 1),
+            nn.Linear(hidden_sizes[-1], output_size),
+        )
+
+        if final_activation is not None:
+            self.model.add_module("final_activation", get_activation(final_activation))
+
+        if scale is not None:
+            self.scale = nn.Parameter(torch.tensor(scale), requires_grad=False)
+        else:
+            self.scale = 1.0
+
+        # shrink the weight of linear layer 'linear'+str(len(hidden_sizes) to it's origin 0.01
+        if shrink is not None:
+            if final_activation is not None:
+                self.model[-2].weight.data.normal_(0, shrink)
+            else:
+                self.model[-1].weight.data.normal_(0, shrink)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Overview:
+            Return the output of the multi-layer perceptron.
+        Arguments:
+            - x (:obj:`torch.Tensor`): The input tensor.
+        """
+        return self.scale * self.model(x)
+
 ENCODERS = {
     "GaussianFourierProjectionTimeEncoder".lower(): GaussianFourierProjectionTimeEncoder,
     "GaussianFourierProjectionEncoder".lower(): GaussianFourierProjectionEncoder,
     "ExponentialFourierProjectionTimeEncoder".lower(): ExponentialFourierProjectionTimeEncoder,
     "SinusoidalPosEmb".lower(): SinusoidalPosEmb,
+    "MLPEncoder".lower(): MLPEncoder,
 }

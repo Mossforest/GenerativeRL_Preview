@@ -27,14 +27,13 @@ from grl.generative_models.metric import compute_likelihood
 from grl.utils import set_seed
 from grl.utils.log import log
 
-# exp_name = "swiss-roll-dynamic-icfm-varying-world-model"
-# exp_name = "swiss-roll-dynamic-icfm-varying-world-model-noise"
-exp_name = "swiss-roll-dynamic-icfm-varying-world-model-test"
+exp_name = "swiss-roll-dynamic-icfm-varying-world-model-mlpencoder"
 
 x_size = 2
 condition_size=3
 device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 t_embedding_dim = 32
+condition_dim=256
 t_encoder = dict(
     type="GaussianFourierProjectionTimeEncoder",
     args=dict(
@@ -43,11 +42,11 @@ t_encoder = dict(
     ),
 )
 condition_encoder = dict(
-    type="GaussianFourierProjectionEncoder",
+    type="MLPEncoder",
     args=dict(
-        embed_dim=t_embedding_dim, # after flatten, 96
-        x_shape=(condition_size,),
-        scale=30.0,
+        hidden_sizes=[condition_size] + [condition_dim] * 2,
+        output_size=condition_dim,
+        activation='relu',
     ),
 )
 data_num=100000
@@ -88,7 +87,7 @@ config = EasyDict(
                             hidden_sizes=[512, 256, 128],
                             output_dim=x_size,
                             t_dim=t_embedding_dim,
-                            condition_dim=t_embedding_dim*condition_size,
+                            condition_dim=condition_dim,
                             condition_hidden_dim=64,
                             t_condition_hidden_dim=128,
                         ),
@@ -294,31 +293,31 @@ if __name__ == "__main__":
         if iteration <= last_iteration:
             continue
 
-        if iteration > 0 and iteration % config.parameter.eval_freq == 0:
-        # if True:
-            flow_model.eval()
-            t_span = torch.linspace(0.0, 1.0, 1000)
-            customized_eval_dataset = DynamicSwissRollDataset(config.dataset, train=True)
-            x0_eval, x1_eval, action_eval, background_eval = customized_eval_dataset.data['state'], customized_eval_dataset.data['next_state'], customized_eval_dataset.data['action'], customized_eval_dataset.data['background']
-            x0_eval = torch.tensor(x0_eval).to(config.device)
-            x1_eval = torch.tensor(x1_eval).to(config.device)
-            condition_eval = torch.cat((torch.tensor(action_eval).unsqueeze(1), torch.tensor(background_eval)), dim=1).float().to(config.device)
+        # if iteration > 0 and iteration % config.parameter.eval_freq == 0:
+        # # if True:
+        #     flow_model.eval()
+        #     t_span = torch.linspace(0.0, 1.0, 1000)
+        #     customized_eval_dataset = DynamicSwissRollDataset(config.dataset, train=True)
+        #     x0_eval, x1_eval, action_eval, background_eval = customized_eval_dataset.data['state'], customized_eval_dataset.data['next_state'], customized_eval_dataset.data['action'], customized_eval_dataset.data['background']
+        #     x0_eval = torch.tensor(x0_eval).to(config.device)
+        #     x1_eval = torch.tensor(x1_eval).to(config.device)
+        #     condition_eval = torch.cat((torch.tensor(action_eval).unsqueeze(1), torch.tensor(background_eval)), dim=1).float().to(config.device)
 
-            # ramdom choose 500 samples from x0_eval, x1_eval, action_eval
-            x0_eval = x0_eval[:500]
-            x1_eval = x1_eval[:500]
-            condition_eval = condition_eval[:500]
+        #     # ramdom choose 500 samples from x0_eval, x1_eval, action_eval
+        #     x0_eval = x0_eval[:500]
+        #     x1_eval = x1_eval[:500]
+        #     condition_eval = condition_eval[:500]
                                                       
-            # action_eval = -torch.ones_like(action_eval).to(config.device)*0.05
-            x_t = (
-                flow_model.sample_forward_process(t_span=t_span, x_0=x0_eval, condition=condition_eval)
-                .cpu()
-                .detach()
-            )
-            x_t = [
-                x.squeeze(0) for x in torch.split(x_t, split_size_or_sections=1, dim=0)
-            ]
-            render_video(x_t, config.parameter.video_save_path, iteration, fps=100, dpi=100)
+        #     # action_eval = -torch.ones_like(action_eval).to(config.device)*0.05
+        #     x_t = (
+        #         flow_model.sample_forward_process(t_span=t_span, x_0=x0_eval, condition=condition_eval)
+        #         .cpu()
+        #         .detach()
+        #     )
+        #     x_t = [
+        #         x.squeeze(0) for x in torch.split(x_t, split_size_or_sections=1, dim=0)
+        #     ]
+        #     render_video(x_t, config.parameter.video_save_path, iteration, fps=100, dpi=100)
 
         batch_data = next(data_generator)
 

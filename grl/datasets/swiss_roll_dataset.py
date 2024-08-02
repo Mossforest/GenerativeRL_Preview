@@ -227,8 +227,8 @@ if __name__ == '__main__':
     origin_line = origin_line * 10 - 5
     
     # # pair the sampled (x, t) 2by2
-    idx_1 = torch.randint(100, (100,))
-    idx_2 = torch.randint(n_samples, (100,))
+    idx_1 = torch.randint(100, (1000,))
+    idx_2 = torch.randint(n_samples, (1000,))
     unfil_x_1 = x[idx_1]
     unfil_t_1 = t[idx_1]
     unfil_x_2 = x[idx_2]
