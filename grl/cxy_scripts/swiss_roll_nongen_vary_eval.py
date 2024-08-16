@@ -143,7 +143,7 @@ if __name__ == "__main__":
         plt.close(fig)
         plt.clf()
     
-    def render_eval_video(origin_line, data_list, video_save_path, video_name, fps=100, dpi=100):
+    def render_eval_video(origin_line, data_list, video_save_path, video_name, title, fps=100, dpi=100):
         if not os.path.exists(video_save_path):
             os.makedirs(video_save_path)
         fig = plt.figure(figsize=(6, 6))
@@ -153,6 +153,7 @@ if __name__ == "__main__":
         colors = np.linspace(0, 1, len(data_list))
         
         origin_line_plot = plt.scatter(origin_line[:, 0], origin_line[:, 1], s=1, alpha=0.8, c='yellow', label='Origin Line')
+        plt.title(title)
 
         for i, data in enumerate(data_list):
             # image alpha frm 0 to 1
@@ -264,6 +265,7 @@ if __name__ == "__main__":
         origin_line = customized_eval_dataset.get_origin_line(500)[0] # param_0
         
         predict_eval = nongen_model(t=t_span, x=x0_eval, condition=condition_eval)
+        loss = torch.nn.functional.mse_loss(predict_eval, x1_eval)
         # interpolate
         interpolated_list = np.linspace(x0_eval.cpu(), predict_eval.detach().cpu(), 1000)  # uniform, (1000, num, dim)
-        render_eval_video(origin_line, interpolated_list, config.parameter.video_save_path, f"eval_video_param_{param}", fps=100, dpi=100)
+        render_eval_video(x1_eval.cpu(), interpolated_list, config.parameter.video_save_path, f"eval_video_param_{param}", f'param: {param}, loss: {loss}', fps=100, dpi=100)

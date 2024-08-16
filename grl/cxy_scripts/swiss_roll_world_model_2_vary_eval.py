@@ -163,7 +163,7 @@ if __name__ == "__main__":
         plt.close(fig)
         plt.clf()
 
-    def render_eval_video(origin_line, data_list, video_save_path, video_name, fps=100, dpi=100):
+    def render_eval_video(origin_line, data_list, video_save_path, video_name, title, fps=100, dpi=100):
         if not os.path.exists(video_save_path):
             os.makedirs(video_save_path)
         fig = plt.figure(figsize=(6, 6))
@@ -173,6 +173,7 @@ if __name__ == "__main__":
         colors = np.linspace(0, 1, len(data_list))
         
         origin_line_plot = plt.scatter(origin_line[:, 0], origin_line[:, 1], s=1, alpha=0.8, c='yellow', label='Origin Line')
+        plt.title(title)
 
         for i, data in enumerate(data_list):
             # image alpha frm 0 to 1
@@ -295,4 +296,5 @@ if __name__ == "__main__":
         x_t = [
             x.squeeze(0) for x in torch.split(x_t, split_size_or_sections=1, dim=0)
         ]
-        render_eval_video(origin_line, x_t, config.parameter.video_save_path, f"eval_video_param_{param}", fps=100, dpi=100)
+        loss = torch.nn.functional.mse_loss(x_t[-1], x1_eval.cpu())
+        render_eval_video(x1_eval.cpu(), x_t, config.parameter.video_save_path, f"eval_video_param_{param}", f'param: {param}, loss: {loss}', fps=100, dpi=100)
