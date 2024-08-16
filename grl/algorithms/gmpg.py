@@ -8,8 +8,9 @@ import torch.nn as nn
 from easydict import EasyDict
 from rich.progress import track
 from tensordict import TensorDict
+from torchrl.data import TensorDictReplayBuffer
+from torchrl.data.replay_buffers.samplers import SamplerWithoutReplacement
 
-import d4rl
 import wandb
 from grl.agents.gm import GPAgent
 
@@ -760,7 +761,7 @@ class GMPGAlgorithm:
                     else:
                         raise NotImplementedError
 
-            def generate_fake_action(model, states, sample_per_state):
+            def generate_fake_action(model, states, action_augment_num):
 
                 fake_actions_sampled = []
                 for states in track(
@@ -770,7 +771,7 @@ class GMPGAlgorithm:
 
                     fake_actions_ = model.behaviour_policy_sample(
                         state=states,
-                        batch_size=sample_per_state,
+                        batch_size=action_augment_num,
                         t_span=(
                             torch.linspace(0.0, 1.0, config.parameter.t_span).to(
                                 states.device
@@ -830,6 +831,7 @@ class GMPGAlgorithm:
                 evaluation_results[f"evaluation/return_min"] = return_min
 
                 if isinstance(self.dataset, GPD4RLDataset):
+                    import d4rl
                     env_id = config.dataset.args.env_id
                     evaluation_results[f"evaluation/return_mean_normalized"] = (
                         d4rl.get_normalized_score(env_id, return_mean)
@@ -862,6 +864,14 @@ class GMPGAlgorithm:
                 lr=config.parameter.behaviour_policy.learning_rate,
             )
 
+            replay_buffer=TensorDictReplayBuffer(
+                storage=self.dataset.storage,
+                batch_size=config.parameter.behaviour_policy.batch_size,
+                sampler=SamplerWithoutReplacement(),
+                prefetch=10,
+                pin_memory=True,
+            )
+
             behaviour_policy_train_iter = 0
             for epoch in track(
                 range(config.parameter.behaviour_policy.epochs),
@@ -870,27 +880,15 @@ class GMPGAlgorithm:
                 if self.behaviour_policy_train_epoch >= epoch:
                     continue
 
-                sampler = torch.utils.data.RandomSampler(
-                    self.dataset, replacement=False
-                )
-                data_loader = torch.utils.data.DataLoader(
-                    self.dataset,
-                    batch_size=config.parameter.behaviour_policy.batch_size,
-                    shuffle=False,
-                    sampler=sampler,
-                    pin_memory=False,
-                    drop_last=True,
-                )
-
                 counter = 1
                 behaviour_policy_loss_sum = 0
-                for data in data_loader:
+                for index, data in enumerate(replay_buffer):
 
                     behaviour_policy_loss = self.model[
                         "GPPolicy"
                     ].behaviour_policy_loss(
-                        action=data["a"],
-                        state=data["s"],
+                        action=data["a"].to(config.model.GPPolicy.device),
+                        state=data["s"].to(config.model.GPPolicy.device),
                         maximum_likelihood=(
                             config.parameter.behaviour_policy.maximum_likelihood
                             if hasattr(
@@ -945,24 +943,20 @@ class GMPGAlgorithm:
                 lr=config.parameter.critic.learning_rate,
             )
 
+            replay_buffer=TensorDictReplayBuffer(
+                storage=self.dataset.storage,
+                batch_size=config.parameter.critic.batch_size,
+                sampler=SamplerWithoutReplacement(),
+                prefetch=10,
+                pin_memory=True,
+            )
+
             critic_train_iter = 0
             for epoch in track(
                 range(config.parameter.critic.epochs), description="Critic training"
             ):
                 if self.critic_train_epoch >= epoch:
                     continue
-
-                sampler = torch.utils.data.RandomSampler(
-                    self.dataset, replacement=False
-                )
-                data_loader = torch.utils.data.DataLoader(
-                    self.dataset,
-                    batch_size=config.parameter.critic.batch_size,
-                    shuffle=False,
-                    sampler=sampler,
-                    pin_memory=False,
-                    drop_last=True,
-                )
 
                 counter = 1
 
@@ -971,22 +965,22 @@ class GMPGAlgorithm:
                 q_loss_sum = 0.0
                 q_sum = 0.0
                 q_target_sum = 0.0
-                for data in data_loader:
+                for index, data in enumerate(replay_buffer):
 
                     v_loss, next_v = self.model["GPPolicy"].critic.v_loss(
-                        state=data["s"],
-                        action=data["a"],
-                        next_state=data["s_"],
+                        state=data["s"].to(config.model.GPPolicy.device),
+                        action=data["a"].to(config.model.GPPolicy.device),
+                        next_state=data["s_"].to(config.model.GPPolicy.device),
                         tau=config.parameter.critic.tau,
                     )
                     v_optimizer.zero_grad(set_to_none=True)
                     v_loss.backward()
                     v_optimizer.step()
                     q_loss, q, q_target = self.model["GPPolicy"].critic.iql_q_loss(
-                        state=data["s"],
-                        action=data["a"],
-                        reward=data["r"],
-                        done=data["d"],
+                        state=data["s"].to(config.model.GPPolicy.device),
+                        action=data["a"].to(config.model.GPPolicy.device),
+                        reward=data["r"].to(config.model.GPPolicy.device),
+                        done=data["d"].to(config.model.GPPolicy.device),
                         next_v=next_v,
                         discount=config.parameter.critic.discount_factor,
                     )
@@ -1060,6 +1054,14 @@ class GMPGAlgorithm:
                 lr=config.parameter.guided_policy.learning_rate,
             )
 
+            replay_buffer=TensorDictReplayBuffer(
+                storage=self.dataset.storage,
+                batch_size=config.parameter.guided_policy.batch_size,
+                sampler=SamplerWithoutReplacement(),
+                prefetch=10,
+                pin_memory=True,
+            )
+
             guided_policy_train_iter = 0
             beta = config.parameter.guided_policy.beta
             for epoch in track(
@@ -1070,21 +1072,9 @@ class GMPGAlgorithm:
                 if self.guided_policy_train_epoch >= epoch:
                     continue
 
-                sampler = torch.utils.data.RandomSampler(
-                    self.dataset, replacement=False
-                )
-                data_loader = torch.utils.data.DataLoader(
-                    self.dataset,
-                    batch_size=config.parameter.guided_policy.batch_size,
-                    shuffle=False,
-                    sampler=sampler,
-                    pin_memory=False,
-                    drop_last=True,
-                )
-
                 counter = 1
                 guided_policy_loss_sum = 0.0
-                for data in data_loader:
+                for index, data in enumerate(replay_buffer):
                     if config.parameter.algorithm_type == "GMPG":
                         (
                             guided_policy_loss,
@@ -1092,7 +1082,7 @@ class GMPGAlgorithm:
                             log_p_loss,
                             log_u_loss,
                         ) = self.model["GPPolicy"].policy_gradient_loss(
-                            data["s"],
+                            data["s"].to(config.model.GPPolicy.device),
                             gradtime_step=config.parameter.guided_policy.gradtime_step,
                             beta=beta,
                             repeats=(
@@ -1108,7 +1098,7 @@ class GMPGAlgorithm:
                             log_p_loss,
                             log_u_loss,
                         ) = self.model["GPPolicy"].policy_gradient_loss_by_REINFORCE(
-                            data["s"],
+                            data["s"].to(config.model.GPPolicy.device),
                             gradtime_step=config.parameter.guided_policy.gradtime_step,
                             beta=beta,
                             repeats=(
@@ -1133,7 +1123,7 @@ class GMPGAlgorithm:
                         ) = self.model[
                             "GPPolicy"
                         ].policy_gradient_loss_by_REINFORCE_softmax(
-                            data["s"],
+                            data["s"].to(config.model.GPPolicy.device),
                             gradtime_step=config.parameter.guided_policy.gradtime_step,
                             beta=beta,
                             repeats=(
@@ -1146,8 +1136,8 @@ class GMPGAlgorithm:
                         guided_policy_loss = self.model[
                             "GPPolicy"
                         ].policy_gradient_loss_add_matching_loss(
-                            data["a"],
-                            data["s"],
+                            data["a"].to(config.model.GPPolicy.device),
+                            data["s"].to(config.model.GPPolicy.device),
                             maximum_likelihood=(
                                 config.parameter.guided_policy.maximum_likelihood
                                 if hasattr(

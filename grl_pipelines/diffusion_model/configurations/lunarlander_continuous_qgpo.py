@@ -28,7 +28,6 @@ config = EasyDict(
         #     type = "QGPOCustomizedDataset",
         #     args = dict(
         #         env_id = "LunarLanderContinuous-v2",
-        #         device = device,
         #         numpy_data_path = "./data.npz",
         #     ),
         # ),
@@ -128,9 +127,9 @@ config = EasyDict(
             behaviour_policy=dict(
                 batch_size=1024,
                 learning_rate=1e-4,
-                iterations=100000,
+                iterations=50000,
             ),
-            sample_per_state=16,
+            action_augment_num=16,
             fake_data_t_span=None if solver_type == "DPMSolver" else 32,
             energy_guided_policy=dict(
                 batch_size=256,

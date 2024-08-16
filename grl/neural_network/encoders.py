@@ -6,6 +6,42 @@ import torch
 import torch.nn as nn
 from grl.neural_network.activation import get_activation
 
+# from grl.neural_network import register_module
+class  statenocder(torch.nn.Module):
+    def __init__(self, input_dims, output_dim):
+        super(statenocder, self).__init__()
+        self.fc1 = torch.nn.Linear(input_dims, 256)  
+        self.fc2 = torch.nn.Linear(256, 256)  
+        self.fc3 = torch.nn.Linear(256, output_dim)  # 修正：最后一层输出维度为 output_dim
+
+        self.relu = torch.nn.ReLU()  # ReLU 激活函数
+
+    def forward(self, x: dict) -> torch.Tensor:
+        concatenated_tensor = torch.cat([v for v in x.values()], dim=1)  
+        output = self.relu(self.fc1(concatenated_tensor))  
+        output = self.relu(self.fc2(output))  
+        output = self.fc3(output)  # 最后一层不需要 ReLU    
+        return output
+# register_module(MyModule, "statenocder")
+
+# from grl.neural_network import register_module
+class  statenocder(torch.nn.Module):
+    def __init__(self, input_dims, output_dim):
+        super(statenocder, self).__init__()
+        self.fc1 = torch.nn.Linear(input_dims, 256)  
+        self.fc2 = torch.nn.Linear(256, 256)  
+        self.fc3 = torch.nn.Linear(256, output_dim)  # 修正：最后一层输出维度为 output_dim
+
+        self.relu = torch.nn.ReLU()  # ReLU 激活函数
+
+    def forward(self, x: dict) -> torch.Tensor:
+        concatenated_tensor = torch.cat([v for v in x.values()], dim=1)  
+        output = self.relu(self.fc1(concatenated_tensor))  
+        output = self.relu(self.fc2(output))  
+        output = self.fc3(output)  # 最后一层不需要 ReLU    
+        return output
+# register_module(MyModule, "statenocder")
+
 
 def get_encoder(type: str):
     """
@@ -300,4 +336,5 @@ ENCODERS = {
     "ExponentialFourierProjectionTimeEncoder".lower(): ExponentialFourierProjectionTimeEncoder,
     "SinusoidalPosEmb".lower(): SinusoidalPosEmb,
     "MLPEncoder".lower(): MLPEncoder,
+    "statenocder".lower(): statenocder,
 }

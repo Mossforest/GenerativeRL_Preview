@@ -27,7 +27,6 @@ config = EasyDict(
             type="D4RLDataset",
             args=dict(
                 env_id="walker2d-medium-expert-v2",
-                device=device,
             ),
         ),
         model=dict(
@@ -100,7 +99,7 @@ config = EasyDict(
                 learning_rate=3e-4,
                 iterations=2000000,
             ),
-            sample_per_state=16,
+            action_augment_num=16,
             critic=dict(
                 batch_size=256,
                 iterations=2000000,
