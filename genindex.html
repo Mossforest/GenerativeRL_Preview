@@ -1,53 +1,222 @@
+
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="./">
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!-->
+<html class="no-js" lang="en">
+<!--<![endif]-->
+
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
   <title>Index &mdash; GenerativeRL v0.0.1 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=fd3f3429" />
-      <link rel="stylesheet" type="text/css" href="_static/css/custom.css" />
+  
+
+  <link rel="shortcut icon" href="_static/images/favicon.ico" />
+  
+  
 
   
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+
   
-        <script src="_static/jquery.js?v=5d32c60e"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=2fea6348"></script>
-        <script src="_static/doctools.js?v=9a2dae69"></script>
-        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
-        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script src="_static/js/theme.js"></script>
-    <link rel="index" title="Index" href="#" />
-    <link rel="search" title="Search" href="search.html" /> 
+  
+  
+
+  
+
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> -->
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/style.css" type="text/css" />
+  <link rel="index" title="Index" href="#" />
+  <link rel="search" title="Search" href="search.html" />
+    <link href="_static/css/style.css" rel="stylesheet" type="text/css">
+
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+  <script>
+    MathJax = {
+        chtml: {
+            scale: 1,
+            minScale: 1,
+        },
+        svg: {
+            scale: 1,
+            minScale: 1,
+        }
+    }
+</script>
+
+  <!-- Preload the theme fonts -->
+
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+
+<!-- Preload the katex fonts -->
+
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Math-Italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size1-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size4-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size2-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size3-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Caligraphic-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/all.css"
+    integrity="sha384-vSIIfh2YWi9wW0r9iZe7RJPrKwp6bG+s9QZMoITbCckVJqGCCRhc+ccxNcdpHuYu" crossorigin="anonymous">
 </head>
 
-<body class="wy-body-for-nav"> 
-  <div class="wy-grid-for-nav">
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+<div class="container-fluid header-holder tutorials-header" id="header-holder">
+  <div class="container">
+    <div class="header-container">
+      <a class="header-logo" href="https://opendilab.github.io/GenerativeRL/"
+        aria-label="OpenMMLab"></a>
+
+      <div class="main-menu">
+        <ul>
+          <li>
+            <a href="https://github.com/opendilab/GenerativeRL" target="_blank">GitHub</a>
+          </li>
+          <li >
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a
+                class="resource-option with-down-arrow">
+                OpenDILab
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="doc-dropdown-option nav-dropdown-item"
+                  href="https://github.com/opendilab/DI-engine" target="_blank">
+                  <span class="dropdown-title">DI-engine </span>
+                  <p>OpenDILab Decision AI Engine</p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item"
+                  href="https://github.com/opendilab/LightZero" target="_blank">
+                  <span class="dropdown-title">LightZero </span>
+                  <p>OpenDILab Decision Monte Carlo Tree Search Framework</p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item"
+                  href="https://github.com/opendilab/GenerativeRL" target="_blank">
+                  <span class="dropdown-title">GenerativeRL </span>
+                  <p>OpenDILab Generative AI Framework</p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item"
+                  href="https://github.com/opendilab/DI-star" target="_blank">
+                  <span class="dropdown-title">DI-star </span>
+                  <p>OpenDILab Decision AI in StarCraftII</p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item"
+                  href="https://github.com/opendilab/DI-drive" target="_blank">
+                  <span class="dropdown-title">DI-drive </span>
+                  <p>OpenDILab Auto-driving platform</p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item"
+                  href="https://github.com/opendilab/GoBigger" target="_blank">
+                  <span class="dropdown-title">GoBigger </span>
+                  <p>OpenDILab Multi-Agent Environment</p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item"
+                  href="https://github.com/opendilab/DI-smartcross" target="_blank">
+                  <span class="dropdown-title">DI-smartcross </span>
+                  <p>Decision Intelligence Platform for Traffic Crossing Signal Control</p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item"
+                  href="https://github.com/opendilab/DI-treetensor" target="_blank">
+                  <span class="dropdown-title">DI-treetensor </span>
+                  <p>Tree Nested PyTorch Tensor Lib</p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item"
+                  href="https://github.com/opendilab/DI-sheep" target="_blank">
+                  <span class="dropdown-title">DI-sheep </span>
+                  <p>Deep Reinforcement Learning + 3 Tiles Game</p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item"
+                  href="https://github.com/opendilab/awesome-model-based-RL" target="_blank">
+                  <span class="dropdown-title">awesome-model-based-RL </span>
+                  <p>A curated list of awesome model based RL resources (continually updated)</p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item"
+                  href="https://github.com/opendilab/awesome-decision-transformer" target="_blank">
+                  <span class="dropdown-title">awesome-decision-transformer </span>
+                  <p>A curated list of Decision Transformer resources (continually updated)</p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item"
+                  href="https://github.com/opendilab/awesome-exploration-rl" target="_blank">
+                  <span class="dropdown-title">awesome-exploration-rl </span>
+                  <p>A curated list of awesome exploration RL resources (continually updated)</p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item"
+                  href="https://github.com/opendilab/awesome-multi-modal-reinforcement-learning" target="_blank">
+                  <span class="dropdown-title">awesome-multi-modal-reinforcement-learning </span>
+                  <p>A curated list of Multi-Modal Reinforcement Learning resources (continually updated)</p>
+                </a>
+              </div>
+          </li>
+        </ul>
+      </div>
+
+      <a class="main-menu-open-button" href="#" data-behavior="open-mobile-menu"></a>
+    </div>
+  </div>
+</div>
+
+<body class="pytorch-body">
+
+   
+
+  
+
+  <div class="table-of-contents-link-wrapper">
+    <span>Table of Contents</span>
+    <a href="#" class="toggle-table-of-contents" data-behavior="toggle-table-of-contents"></a>
+  </div>
+
+  <nav data-toggle="wy-nav-shift" class="pytorch-left-menu" id="pytorch-left-menu">
+    <div class="pytorch-side-scroll">
+      <div class="pytorch-menu pytorch-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        <div class="pytorch-left-menu-search">
+          
 
           
           
-          <a href="index.html" class="icon icon-home">
-            GenerativeRL
-          </a>
-              <div class="version">
-                0.0.1
-              </div>
+          
+          <div class="version">
+            0.0.1
+          </div>
+          
+          
+
+          
+
+
+
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="text" name="q" placeholder="Search Docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
 </div>
-        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+
+          
+        </div>
+
+        
+        
+        
+        
+        
+        
+        <p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="tutorials/installation/index.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorials/quick_start/index.html">Quick Start</a></li>
@@ -64,29 +233,70 @@
 <li class="toctree-l1"><a class="reference internal" href="api_doc/utils/index.html">grl.utils</a></li>
 </ul>
 
-        </div>
+        
+        
       </div>
-    </nav>
+    </div>
+  </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
-          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">GenerativeRL</a>
-      </nav>
+  <div class="pytorch-container">
+    <div class="pytorch-page-level-bar" id="pytorch-page-level-bar">
+      <div class="pytorch-breadcrumbs-wrapper">
+        
 
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          <div role="navigation" aria-label="Page navigation">
-  <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Index</li>
-      <li class="wy-breadcrumbs-aside">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="pytorch-breadcrumbs">
+    
+      <li>
+        <a href="index.html">
+            Docs
+        </a> &gt;
       </li>
+
+        
+      <li>Index</li>
+    
+    
+      <li class="pytorch-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
   </ul>
-  <hr/>
+
+  
 </div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
-             
+      </div>
+
+      <div class="pytorch-shortcuts-wrapper" id="pytorch-shortcuts-wrapper">
+        Shortcuts
+      </div>
+    </div>
+
+    <section data-toggle="wy-nav-shift" id="pytorch-content-wrap" class="pytorch-content-wrap">
+      <div class="pytorch-content-left">
+        
+          <div class="rst-content">
+            
+            <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
+              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
+                
 
 <h1 id="index">Index</h1>
 
@@ -163,18 +373,6 @@
 </li>
         <li><a href="api_doc/numerical_methods/index.html#grl.numerical_methods.SDESolver.__init__">(grl.numerical_methods.SDESolver method)</a>
 </li>
-        <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.DoubleQNetwork.__init__">(grl.rl_modules.DoubleQNetwork method)</a>
-</li>
-        <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.DoubleVNetwork.__init__">(grl.rl_modules.DoubleVNetwork method)</a>
-</li>
-        <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.GymEnvSimulator.__init__">(grl.rl_modules.GymEnvSimulator method)</a>
-</li>
-        <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.OneShotValueFunction.__init__">(grl.rl_modules.OneShotValueFunction method)</a>
-</li>
-        <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.QNetwork.__init__">(grl.rl_modules.QNetwork method)</a>
-</li>
-        <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.VNetwork.__init__">(grl.rl_modules.VNetwork method)</a>
-</li>
       </ul></li>
   </ul></td>
 </tr></table>
@@ -196,26 +394,10 @@
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.GymEnvSimulator.collect_episodes">collect_episodes() (grl.rl_modules.GymEnvSimulator method)</a>
-</li>
-      <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.GymEnvSimulator.collect_steps">collect_steps() (grl.rl_modules.GymEnvSimulator method)</a>
-</li>
-      <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.DoubleQNetwork.compute_double_q">compute_double_q() (grl.rl_modules.DoubleQNetwork method)</a>
-</li>
-      <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.DoubleVNetwork.compute_double_v">compute_double_v() (grl.rl_modules.DoubleVNetwork method)</a>
-
-      <ul>
-        <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.OneShotValueFunction.compute_double_v">(grl.rl_modules.OneShotValueFunction method)</a>
-</li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.DoubleQNetwork.compute_mininum_q">compute_mininum_q() (grl.rl_modules.DoubleQNetwork method)</a>
-</li>
-      <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.DoubleVNetwork.compute_mininum_v">compute_mininum_v() (grl.rl_modules.DoubleVNetwork method)</a>
-</li>
       <li><a href="api_doc/neural_network/index.html#grl.neural_network.ConcatenateLayer">ConcatenateLayer (class in grl.neural_network)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api_doc/neural_network/index.html#grl.neural_network.ConcatenateMLP">ConcatenateMLP (class in grl.neural_network)</a>
 </li>
       <li><a href="api_doc/numerical_methods/index.html#grl.numerical_methods.GaussianConditionalProbabilityPath.covariance">covariance() (grl.numerical_methods.GaussianConditionalProbabilityPath method)</a>
@@ -246,10 +428,10 @@
 </li>
       <li><a href="api_doc/numerical_methods/index.html#grl.numerical_methods.GaussianConditionalProbabilityPath.diffusion_squared">diffusion_squared() (grl.numerical_methods.GaussianConditionalProbabilityPath method)</a>
 </li>
-      <li><a href="api_doc/generative_models/index.html#grl.generative_models.DiffusionModel">DiffusionModel (class in grl.generative_models)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api_doc/generative_models/index.html#grl.generative_models.DiffusionModel">DiffusionModel (class in grl.generative_models)</a>
+</li>
       <li><a href="api_doc/neural_network/index.html#grl.neural_network.DiT">DiT (class in grl.neural_network)</a>
 </li>
       <li><a href="api_doc/neural_network/index.html#grl.neural_network.DiT1D">DiT1D (class in grl.neural_network)</a>
@@ -257,10 +439,6 @@
       <li><a href="api_doc/neural_network/index.html#grl.neural_network.DiT2D">DiT2D (in module grl.neural_network)</a>
 </li>
       <li><a href="api_doc/neural_network/index.html#grl.neural_network.DiT3D">DiT3D (class in grl.neural_network)</a>
-</li>
-      <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.DoubleQNetwork">DoubleQNetwork (class in grl.rl_modules)</a>
-</li>
-      <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.DoubleVNetwork">DoubleVNetwork (class in grl.rl_modules)</a>
 </li>
       <li><a href="api_doc/numerical_methods/index.html#grl.numerical_methods.DPMSolver">DPMSolver (class in grl.numerical_methods)</a>
 </li>
@@ -281,8 +459,6 @@
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api_doc/generative_models/index.html#grl.generative_models.EnergyConditionalDiffusionModel">EnergyConditionalDiffusionModel (class in grl.generative_models)</a>
-</li>
-      <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.GymEnvSimulator.evaluate">evaluate() (grl.rl_modules.GymEnvSimulator method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -317,20 +493,12 @@
 </li>
         <li><a href="api_doc/neural_network/index.html#grl.neural_network.TemporalSpatialResidualNet.forward">(grl.neural_network.TemporalSpatialResidualNet method)</a>
 </li>
-        <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.DoubleQNetwork.forward">(grl.rl_modules.DoubleQNetwork method)</a>
-</li>
-        <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.DoubleVNetwork.forward">(grl.rl_modules.DoubleVNetwork method)</a>
-</li>
-        <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.OneShotValueFunction.forward">(grl.rl_modules.OneShotValueFunction method)</a>
-</li>
-        <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.QNetwork.forward">(grl.rl_modules.QNetwork method)</a>
-</li>
-        <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.VNetwork.forward">(grl.rl_modules.VNetwork method)</a>
-</li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api_doc/generative_models/index.html#grl.generative_models.DiffusionModel.forward_sample">forward_sample() (grl.generative_models.DiffusionModel method)</a>
+</li>
+      <li><a href="api_doc/generative_models/index.html#grl.generative_models.DiffusionModel.forward_sample_process">forward_sample_process() (grl.generative_models.DiffusionModel method)</a>
 </li>
       <li><a href="api_doc/neural_network/index.html#grl.neural_network.DiT.forward_with_cfg">forward_with_cfg() (grl.neural_network.DiT method)</a>
 </li>
@@ -362,6 +530,8 @@
         <li><a href="api_doc/datasets/index.html#module-grl.datasets">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     grl.generative_models
 
@@ -369,8 +539,6 @@
         <li><a href="api_doc/generative_models/index.html#module-grl.generative_models">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     grl.neural_network
 
@@ -386,21 +554,12 @@
 </li>
       </ul></li>
       <li>
-    grl.rl_modules
-
-      <ul>
-        <li><a href="api_doc/rl_modules/index.html#module-grl.rl_modules">module</a>
-</li>
-      </ul></li>
-      <li>
     grl.utils
 
       <ul>
         <li><a href="api_doc/utils/index.html#module-grl.utils">module</a>
 </li>
       </ul></li>
-      <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.GymEnvSimulator">GymEnvSimulator (class in grl.rl_modules)</a>
-</li>
   </ul></td>
 </tr></table>
 
@@ -443,6 +602,14 @@
 <h2 id="L">L</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api_doc/generative_models/index.html#grl.generative_models.DiffusionModel.log_prob">log_prob() (grl.generative_models.DiffusionModel method)</a>
+
+      <ul>
+        <li><a href="api_doc/generative_models/index.html#grl.generative_models.IndependentConditionalFlowModel.log_prob">(grl.generative_models.IndependentConditionalFlowModel method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api_doc/numerical_methods/index.html#grl.numerical_methods.GaussianConditionalProbabilityPath.log_scale">log_scale() (grl.numerical_methods.GaussianConditionalProbabilityPath method)</a>
 </li>
   </ul></td>
@@ -464,8 +631,6 @@
         <li><a href="api_doc/neural_network/index.html#module-grl.neural_network">grl.neural_network</a>
 </li>
         <li><a href="api_doc/numerical_methods/index.html#module-grl.numerical_methods">grl.numerical_methods</a>
-</li>
-        <li><a href="api_doc/rl_modules/index.html#module-grl.rl_modules">grl.rl_modules</a>
 </li>
         <li><a href="api_doc/utils/index.html#module-grl.utils">grl.utils</a>
 </li>
@@ -498,11 +663,9 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api_doc/numerical_methods/index.html#grl.numerical_methods.ODE">ODE (class in grl.numerical_methods)</a>
 </li>
-      <li><a href="api_doc/numerical_methods/index.html#grl.numerical_methods.ODESolver">ODESolver (class in grl.numerical_methods)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.OneShotValueFunction">OneShotValueFunction (class in grl.rl_modules)</a>
+      <li><a href="api_doc/numerical_methods/index.html#grl.numerical_methods.ODESolver">ODESolver (class in grl.numerical_methods)</a>
 </li>
       <li><a href="api_doc/generative_models/index.html#grl.generative_models.OptimalTransportConditionalFlowModel">OptimalTransportConditionalFlowModel (class in grl.generative_models)</a>
 </li>
@@ -514,13 +677,11 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api_doc/agents/index.html#grl.agents.QGPOAgent">QGPOAgent (class in grl.agents)</a>
 </li>
-      <li><a href="api_doc/datasets/index.html#grl.datasets.QGPOD4RLDataset">QGPOD4RLDataset (class in grl.datasets)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_doc/datasets/index.html#grl.datasets.QGPODataset">QGPODataset (class in grl.datasets)</a>
+      <li><a href="api_doc/datasets/index.html#grl.datasets.QGPOD4RLDataset">QGPOD4RLDataset (class in grl.datasets)</a>
 </li>
-      <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.QNetwork">QNetwork (class in grl.rl_modules)</a>
+      <li><a href="api_doc/datasets/index.html#grl.datasets.QGPODataset">QGPODataset (class in grl.datasets)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -560,10 +721,16 @@
         <li><a href="api_doc/generative_models/index.html#grl.generative_models.EnergyConditionalDiffusionModel.sample_with_fixed_x">(grl.generative_models.EnergyConditionalDiffusionModel method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api_doc/generative_models/index.html#grl.generative_models.EnergyConditionalDiffusionModel.sample_with_fixed_x_without_energy_guidance">sample_with_fixed_x_without_energy_guidance() (grl.generative_models.EnergyConditionalDiffusionModel method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api_doc/generative_models/index.html#grl.generative_models.DiffusionModel.sample_with_log_prob">sample_with_log_prob() (grl.generative_models.DiffusionModel method)</a>
+
+      <ul>
+        <li><a href="api_doc/generative_models/index.html#grl.generative_models.IndependentConditionalFlowModel.sample_with_log_prob">(grl.generative_models.IndependentConditionalFlowModel method)</a>
+</li>
+      </ul></li>
       <li><a href="api_doc/generative_models/index.html#grl.generative_models.EnergyConditionalDiffusionModel.sample_without_energy_guidance">sample_without_energy_guidance() (grl.generative_models.EnergyConditionalDiffusionModel method)</a>
 </li>
       <li><a href="api_doc/numerical_methods/index.html#grl.numerical_methods.GaussianConditionalProbabilityPath.scale">scale() (grl.numerical_methods.GaussianConditionalProbabilityPath method)</a>
@@ -618,8 +785,6 @@
 <h2 id="V">V</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.OneShotValueFunction.v_loss">v_loss() (grl.rl_modules.OneShotValueFunction method)</a>
-</li>
       <li><a href="api_doc/generative_models/index.html#grl.generative_models.DiffusionModel.velocity_function">velocity_function() (grl.generative_models.DiffusionModel method)</a>
 
       <ul>
@@ -627,39 +792,123 @@
 </li>
       </ul></li>
   </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_doc/rl_modules/index.html#grl.rl_modules.VNetwork">VNetwork (class in grl.rl_modules)</a>
-</li>
-  </ul></td>
 </tr></table>
 
 
 
-           </div>
-          </div>
-          <footer>
+              </article>
+              
+            </div>
+            <footer>
+  
 
-  <hr/>
+  <hr>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2024, OpenDILab Contributors.</p>
-  </div>
+    <p>
+      &copy; Copyright 2024, OpenDILab Contributors.
 
-  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+    </p>
+  </div>
+  
+  <div>
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a
+      href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the
+      Docs</a>.
+  </div>
    
 
 </footer>
+          </div>
         </div>
-      </div>
+
+        <div class="pytorch-content-right" id="pytorch-content-right">
+          <div class="pytorch-right-menu" id="pytorch-right-menu">
+            <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
+              
+            </div>
+          </div>
+        </div>
     </section>
   </div>
-  <script>
-      jQuery(function () {
-          SphinxRtdTheme.Navigation.enable(true);
+
+  
+
+
+  
+
+  
+  <script type="text/javascript" id="documentation_options" data-url_root="./"
+    src="_static/documentation_options.js"></script>
+  <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+  <script src="_static/doctools.js"></script>
+  <script src="_static/sphinx_highlight.js"></script>
+  <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+  
+
+  
+
+  <script type="text/javascript" src="_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="_static/js/vendor/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
+  <script type="text/javascript" src="_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+    jQuery(function () {
+      SphinxRtdTheme.Navigation.enable(true);
       });
   </script> 
 
+  <!-- Begin Footer -->
+
+  <div class="container-fluid docs-tutorials-resources" id="docs-tutorials-resources">
+  </div>
+
+  <!-- End Footer -->
+
+  <!-- Begin Mobile Menu -->
+
+  <div class="mobile-main-menu">
+    <div class="container-fluid">
+      <div class="container">
+        <div class="mobile-main-menu-header-container">
+          <a class="header-logo" href="https://opendilab.github.io/GenerativeRL/" aria-label="OpenMMLab"></a>
+          <a class="main-menu-close-button" href="#" data-behavior="close-mobile-menu"></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-main-menu-links-container">
+      <div class="main-menu">
+        <ul>
+          <li>
+            <a href="https://github.com/opendilab/GenerativeRL" target="_blank">GitHub</a>
+          </li>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Mobile Menu -->
+
+  <script type="text/javascript" src="_static/js/vendor/anchor.min.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      mobileMenu.bind();
+      mobileTOC.bind();
+      pytorchAnchors.bind();
+      sideMenus.bind();
+      scrollToAnchor.bind();
+      highlightNavigation.bind();
+      mainMenuDropdown.bind();
+      filterTags.bind();
+
+      // Add class to links that have code blocks, since we cannot create links in code blocks
+      $("article.pytorch-article a span.pre").each(function (e) {
+        $(this).closest("a").addClass("has-code");
+      });
+    })
+  </script>
 </body>
+
 </html>
