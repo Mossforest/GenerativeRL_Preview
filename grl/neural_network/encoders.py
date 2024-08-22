@@ -1,5 +1,6 @@
 import math
 from typing import Callable, List, Optional, Union
+from tensordict import TensorDict
 
 import numpy as np
 import torch
@@ -330,11 +331,37 @@ class MLPEncoder(nn.Module):
         """
         return self.scale * self.model(x)
 
+
+class MultiMLPEncoder(nn.Module):
+    # for dynamic model use: encode action and background seperately
+
+    def __init__(self, **kwargs):
+        super().__init__()
+
+        self.model = torch.nn.ModuleDict()
+        for key, value in kwargs.items():
+            if "encoder" in key:
+                self.model[key] = MLPEncoder(**value) # TODO: **config.t_encoder.args, same thing?
+
+    def forward(self, x: TensorDict) -> torch.Tensor:
+        """
+        Overview:
+            Return the output of the multi-layer perceptron.
+        Arguments:
+            - x (:obj:`torch.Tensor`): The input tensor.
+        """
+        outputs = TensorDict()
+        for key, value in x.items():
+            outputs[key] = self.model[f'{key}_encoder'](value)
+        return outputs
+
+
 ENCODERS = {
     "GaussianFourierProjectionTimeEncoder".lower(): GaussianFourierProjectionTimeEncoder,
     "GaussianFourierProjectionEncoder".lower(): GaussianFourierProjectionEncoder,
     "ExponentialFourierProjectionTimeEncoder".lower(): ExponentialFourierProjectionTimeEncoder,
     "SinusoidalPosEmb".lower(): SinusoidalPosEmb,
     "MLPEncoder".lower(): MLPEncoder,
+    "MultiMLPEncoder".lower(): MultiMLPEncoder,
     "statenocder".lower(): statenocder,
 }

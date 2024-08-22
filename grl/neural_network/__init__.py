@@ -8,6 +8,11 @@ from tensordict import TensorDict
 from grl.neural_network.activation import get_activation
 from grl.neural_network.encoders import get_encoder
 from grl.neural_network.residual_network import MLPResNet
+from grl.neural_network.graph_network import GAT, HeteroGNN
+
+from torch_geometric.data import HeteroData, Batch
+import torch_geometric.transforms as T
+from torch_geometric.nn import GATConv, Linear, to_hetero
 
 
 def register_module(module: nn.Module, name: str):
@@ -595,6 +600,85 @@ class IntrinsicModel(nn.Module):
         return output
 
 
+class HeterogeneousGraphModel(nn.Module):
+    """
+    Overview:
+        HeterogeneousGraphModel for world dynamic model.
+        Consist of (state, action, background, t) four kinds of nodes, fully connect
+    Interface:
+        ``__init__``, ``forward``
+    """
+
+    def __init__(
+        self,
+        hidden_sizes: List[int],
+        output_dim: int,
+        device,
+    ):
+        super().__init__()
+        
+        # self.model = torch.nn.ModuleList()
+        # for hiddim, outdim in zip(hidden_sizes[:-1], hidden_sizes[1:]):
+        #     model = GAT(hiddim, outdim)
+        #     self.model.append()
+        #     # todo: some other ops for GAT structure
+        # self.model.append(GAT(hidden_sizes[-1], state_dim))
+        
+        self.model = HeteroGNN(hidden_channels=hidden_sizes, out_channels=output_dim)
+        self.lazy_initialized = False
+        self.device = device
+        self.model.to(self.device)
+
+    
+    def create_graph(self, state, action, background, t):
+        data = HeteroData()
+
+        data['state'].x = state.reshape((1, -1)) # [num_item, num_features]
+        data['action'].x = action.reshape((1, -1)) # [num_item, num_features]
+        data['background'].x = background.reshape((1, -1)) # [num_item, num_features]
+        data['t'].x = t.reshape((1, -1)) # [num_item, num_features]
+        
+        key_l = ['state', 'action', 'background', 't']
+        for k1 in key_l:
+            for k2 in key_l:
+                if k1 == k2:
+                    continue
+                data[k1, f'{k1}, {k2}', k2].edge_index = torch.tensor([[0], [0]]).int()
+
+        # data['state', 's,a', 'action'].edge_attr = torch.randn((1, self.edge_dim))
+        # data['state', 's,bg', 'background'].edge_attr = torch.randn((1, self.edge_dim))
+        # data['state', 's,t', 't'].edge_attr = torch.randn((1, self.edge_dim))
+        # data['action', 'a,bg', 'background'].edge_attr = torch.randn((1, self.edge_dim))
+        # data['action', 'a,t', 't'].edge_attr = torch.randn((1, self.edge_dim))
+        # data['background', 'bg,t', 't'].edge_attr = torch.randn((1, self.edge_dim)) # [num_edges_affiliated, num_features_affiliated]
+        
+        return data.to(self.device)
+
+    def forward(
+        self,
+        t: torch.Tensor,
+        x: torch.Tensor,
+        condition: Union[torch.Tensor, TensorDict],
+    ) -> torch.Tensor:
+        # graph data process
+        graph_data = []
+        for batch_idx in range(x.shape[0]):
+            graph_data.append(self.create_graph(x[batch_idx], condition['action'][batch_idx], condition['background'][batch_idx], t[batch_idx]))
+        graph_data = Batch.from_data_list(graph_data)
+        graph_data = T.AddSelfLoops()(graph_data)
+        graph_data = T.NormalizeFeatures()(graph_data)
+        
+        self.model.to(self.device)
+        
+        # network passing
+        if not self.lazy_initialized:
+            with torch.no_grad():  # Initialize lazy modules.
+                _ = self.model(graph_data.x_dict, graph_data.edge_index_dict)
+        output = self.model(graph_data.x_dict, graph_data.edge_index_dict)
+        return output
+
+
+
 MODULES = {
     "Sequential".lower(): Sequential,
     "TimeExtension".lower(): TimeExtension,
@@ -604,6 +688,7 @@ MODULES = {
     "ConcatenateMLP".lower(): ConcatenateMLP,
     "ALLCONCATMLP".lower(): ALLCONCATMLP,
     "TemporalSpatialResidualNet".lower(): TemporalSpatialResidualNet,
+    "HeterogeneousGraphModel".lower(): HeterogeneousGraphModel,
     "DiT".lower(): DiT,
     "DiT_3D".lower(): DiT3D,
     "DiT_2D".lower(): DiT,
