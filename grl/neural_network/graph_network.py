@@ -1,4 +1,5 @@
 import torch
+import time
 from torch_geometric.nn import GATConv, Linear
 import torch_geometric.transforms as T
 from torch_geometric.datasets import OGB_MAG

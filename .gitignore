@@ -166,3 +166,6 @@ wandb/
 *.npy
 *.png
 *.npz
+
+batchdata.py
+cumsum.py

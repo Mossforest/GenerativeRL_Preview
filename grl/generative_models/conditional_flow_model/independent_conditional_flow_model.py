@@ -166,7 +166,7 @@ class IndependentConditionalFlowModel(nn.Module):
             else:
                 assert False, "Invalid batch size"
 
-        if x_0 is not None and condition is not None:
+        if x_0 is not None and condition is not None and not isinstance(condition, TensorDict):
             assert (
                 x_0.shape[0] == condition.shape[0]
             ), "The batch size of x_0 and condition must be the same"
@@ -211,10 +211,16 @@ class IndependentConditionalFlowModel(nn.Module):
             # x.shape = (B*N, D)
 
         if condition is not None:
-            condition = torch.repeat_interleave(
-                condition, torch.prod(extra_batch_size), dim=0
-            )
-            # condition.shape = (B*N, D)
+            if isinstance(condition, TensorDict):
+                for key, value in condition.items():
+                    condition[key] = torch.repeat_interleave(
+                    value, torch.prod(extra_batch_size), dim=0
+                )
+            else:
+                condition = torch.repeat_interleave(
+                    condition, torch.prod(extra_batch_size), dim=0
+                )
+                # condition.shape = (B*N, D)
 
         if isinstance(solver, DPMSolver):
             raise NotImplementedError("Not implemented")

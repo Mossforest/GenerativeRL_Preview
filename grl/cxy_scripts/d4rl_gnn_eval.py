@@ -150,11 +150,6 @@ if __name__ == "__main__":
         prefetch=10,
         pin_memory=True,
     )
-    
-    optimizer = torch.optim.Adam(
-        flow_model.parameters(),
-        lr=config.parameter.lr,
-    )
 
 
     if config.parameter.checkpoint_path is not None:
@@ -181,77 +176,31 @@ if __name__ == "__main__":
                 map_location="cpu",
             )
             flow_model.load_state_dict(checkpoint["model"])
-            optimizer.load_state_dict(checkpoint["optimizer"])
             last_iteration = checkpoint["iteration"]
     else:
         last_iteration = -1
 
 
-    def save_checkpoint(model, optimizer, iteration):
-        if not os.path.exists(config.parameter.checkpoint_path):
-            os.makedirs(config.parameter.checkpoint_path)
-        torch.save(
-            dict(
-                model=model.state_dict(),
-                optimizer=optimizer.state_dict(),
-                iteration=iteration,
-            ),
-            f=os.path.join(
-                config.parameter.checkpoint_path, f"checkpoint_{iteration}.pt"
-            ),
+    for index, batch_data in enumerate(replay_buffer):
+        
+        action=batch_data["a"].to(config.device).to(torch.float32)
+        state=batch_data["s"].to(config.device).to(torch.float32)
+        next_state=batch_data["s_"].to(config.device).to(torch.float32)
+        condition = TensorDict()
+        condition['action'] = action
+        condition['background'] = torch.zeros((action.shape[0], 1)).to(config.device).to(torch.float32)
+
+        flow_model.eval()
+        t_span = torch.linspace(0.0, 1.0, 1000)
+        x_t = (
+            flow_model.sample_forward_process(t_span=t_span, x_0=state, condition=condition)
+            .cpu()
+            .detach()
         )
-
-    def save_checkpoint_on_exit(model, optimizer, iterations):
-        def exit_handler(signal, frame):
-            log.info("Saving checkpoint when exit...")
-            save_checkpoint(model, optimizer, iteration=iterations[-1])
-            log.info("Done.")
-            sys.exit(0)
-
-        signal.signal(signal.SIGINT, exit_handler)
-
-
-    gradient_sum = 0.0
-    loss_sum = 0.0
-    counter = 0
-    history_iteration = [-1]
-    save_checkpoint_on_exit(flow_model, optimizer, history_iteration)
-
-
-    for iteration in track(range(config.parameter.num_iterations), description="Training"):
-
-        for index, batch_data in enumerate(replay_buffer):
-            
-            action=batch_data["a"].to(config.device).to(torch.float32)
-            state=batch_data["s"].to(config.device).to(torch.float32)
-            next_state=batch_data["s_"].to(config.device).to(torch.float32)
-            condition = TensorDict()
-            condition['action'] = action
-            condition['background'] = torch.zeros((action.shape[0], 1)).to(config.device).to(torch.float32)
-
-            flow_model.train()
-            loss = flow_model.flow_matching_loss(x0=state, x1=next_state, condition=condition)
-            optimizer.zero_grad()
-            loss.backward()
-            gradien_norm = torch.nn.utils.clip_grad_norm_(
-                flow_model.parameters(), config.parameter.clip_grad_norm
-            )
-            optimizer.step()
-            gradient_sum += gradien_norm.item()
-            loss_sum += loss.item()
-            counter += 1
-
-            log.info(
-                f"iteration {iteration}, gradient {gradient_sum/counter}, loss {loss_sum/counter}"
-            )
-
-            history_iteration.append(iteration)
-            
-            wandb.log({
-                'iteration': iteration,
-                'step': counter,
-                'loss': loss.item(),
-            }, step=counter)
-
-        if (iteration + 1) % config.parameter.checkpoint_freq == 0:
-            save_checkpoint(flow_model, optimizer, iteration)
+        x_t = [
+            x.squeeze(0) for x in torch.split(x_t, split_size_or_sections=1, dim=0)
+        ]
+        loss = torch.nn.functional.mse_loss(x_t[-1], next_state.cpu())
+        
+        print(loss)
+        break

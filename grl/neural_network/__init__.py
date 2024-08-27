@@ -1,5 +1,6 @@
 from typing import Callable, List, Optional, Union
 
+import time
 import torch
 import torch.nn as nn
 from easydict import EasyDict
@@ -9,6 +10,7 @@ from grl.neural_network.activation import get_activation
 from grl.neural_network.encoders import get_encoder
 from grl.neural_network.residual_network import MLPResNet
 from grl.neural_network.graph_network import GAT, HeteroGNN
+from grl.datasets.graph import CustomBatch
 
 from torch_geometric.data import HeteroData, Batch
 import torch_geometric.transforms as T
@@ -628,31 +630,32 @@ class HeterogeneousGraphModel(nn.Module):
         self.lazy_initialized = False
         self.device = device
         self.model.to(self.device)
+        self.time = 0
+        self.time2 = 0
+        self.cnt = 0
 
     
     def create_graph(self, state, action, background, t):
         data = HeteroData()
+        batch_size = state.shape[0]
 
-        data['state'].x = state.reshape((1, -1)) # [num_item, num_features]
-        data['action'].x = action.reshape((1, -1)) # [num_item, num_features]
-        data['background'].x = background.reshape((1, -1)) # [num_item, num_features]
-        data['t'].x = t.reshape((1, -1)) # [num_item, num_features]
+        data['state'].x = state.unsqueeze(1) # state.reshape((1, -1)) # [num_item, num_features]
+        data['action'].x = action.unsqueeze(1) # [num_item, num_features]
+        data['background'].x = background.unsqueeze(1) # [num_item, num_features]
+        data['t'].x = t.unsqueeze(1) # [num_item, num_features]
         
         key_l = ['state', 'action', 'background', 't']
         for k1 in key_l:
             for k2 in key_l:
                 if k1 == k2:
                     continue
-                data[k1, f'{k1}, {k2}', k2].edge_index = torch.tensor([[0], [0]]).int()
-
-        # data['state', 's,a', 'action'].edge_attr = torch.randn((1, self.edge_dim))
-        # data['state', 's,bg', 'background'].edge_attr = torch.randn((1, self.edge_dim))
-        # data['state', 's,t', 't'].edge_attr = torch.randn((1, self.edge_dim))
-        # data['action', 'a,bg', 'background'].edge_attr = torch.randn((1, self.edge_dim))
-        # data['action', 'a,t', 't'].edge_attr = torch.randn((1, self.edge_dim))
-        # data['background', 'bg,t', 't'].edge_attr = torch.randn((1, self.edge_dim)) # [num_edges_affiliated, num_features_affiliated]
+                unit = torch.tensor([[0], [0]]).int()
+                data[k1, f'{k1}, {k2}', k2].edge_index = unit.repeat(batch_size, 1, 1)
         
-        return data.to(self.device)
+        data = data.to(self.device)
+        batch_data = CustomBatch.from_batch_data(data, batch_num=batch_size)
+        
+        return batch_data
 
     def forward(
         self,
@@ -661,10 +664,8 @@ class HeterogeneousGraphModel(nn.Module):
         condition: Union[torch.Tensor, TensorDict],
     ) -> torch.Tensor:
         # graph data process
-        graph_data = []
-        for batch_idx in range(x.shape[0]):
-            graph_data.append(self.create_graph(x[batch_idx], condition['action'][batch_idx], condition['background'][batch_idx], t[batch_idx]))
-        graph_data = Batch.from_data_list(graph_data)
+        self.cnt+=1
+        graph_data = self.create_graph(x, condition['action'], condition['background'], t)
         graph_data = T.AddSelfLoops()(graph_data)
         graph_data = T.NormalizeFeatures()(graph_data)
         
@@ -675,6 +676,9 @@ class HeterogeneousGraphModel(nn.Module):
             with torch.no_grad():  # Initialize lazy modules.
                 _ = self.model(graph_data.x_dict, graph_data.edge_index_dict)
         output = self.model(graph_data.x_dict, graph_data.edge_index_dict)
+        
+        if not self.cnt % 50:
+            print(f'HNN forward: {self.cnt}, t1 = {(self.time / self.cnt):.2f}')
         return output
 
 

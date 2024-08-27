@@ -11,6 +11,25 @@ from torch_geometric.data import InMemoryDataset, Data
 from grl.utils.log import log
 from grl.datasets.gp import GPD4RLDataset
 
+from torch import Tensor
+from torch_geometric.data import Batch
+from torch_geometric.utils import cumsum
+from torch_geometric.data.storage import NodeStorage
+
+from typing_extensions import Self
+from collections import defaultdict
+from typing import (
+    Dict,
+    List,
+    Optional,
+    TypeVar,
+    Union,
+)
+
+T = TypeVar('T')
+SliceDictType = Dict[str, Union[Tensor, Dict[str, Tensor]]]
+IncDictType = Dict[str, Union[Tensor, Dict[str, Tensor]]]
+
 
 
 class D4RLGraphDataset(InMemoryDataset):
@@ -141,3 +160,116 @@ class D4RLGraphDataset(InMemoryDataset):
     
     def process(self):
         pass
+
+
+
+def custom_inc(key, stores):
+    if 'edge_index' in key:
+        unit = torch.tensor(stores[0].size()).view(2, 1)
+        repeats = unit.repeat(stores.shape[0], 1, 1)
+    else:
+        repeats = torch.zeros(stores.shape[0], dtype=int)
+    return cumsum(repeats[:-1])
+
+def repeat_interleave(
+    repeats: List[int],
+    device: Optional[torch.device] = None,
+) -> Tensor:
+    outs = [torch.full((n, ), i, device=device) for i, n in enumerate(repeats)]
+    return torch.cat(outs, dim=0)
+
+
+def collate(
+    cls,
+    batch_data,
+    add_batch: bool = True,
+):
+    
+    if cls != batch_data.__class__:  # Dynamic inheritance.
+        out = cls(_base_cls=batch_data.__class__)  # type: ignore
+    else:
+        out = cls()
+
+    # Create empty stores:
+    out.stores_as(batch_data)  # type: ignore
+
+    key_to_stores = defaultdict(list)
+    for store in batch_data.stores:
+        key_to_stores[store._key] = store
+
+    device: Optional[torch.device] = None
+    slice_dict: SliceDictType = {}
+    inc_dict: IncDictType = {}
+    for out_store in out.stores:  # type: ignore
+        key = out_store._key
+        stores = key_to_stores[key]  # Node/EdgeStorage
+        for attr in stores.keys():
+
+            value = stores[attr]  # tensor [Batch, node, feat]
+
+            # The `num_nodes` attribute needs special treatment, as we need to
+            # sum their values up instead of merging them to a list:
+            if attr == 'num_nodes':
+                assert 0, "Incomplete implementation"
+                # out_store._num_nodes = value
+                # out_store.num_nodes = sum(value)
+                # continue
+
+            # Skip batching of `ptr` vectors for now:
+            if attr == 'ptr':
+                continue
+
+            # Collate attributes into a unified representation:
+            slices = torch.arange(0, (value.shape[0]+1)*value.shape[1], value.shape[1])
+            incs = custom_inc(attr, value)
+            if isinstance(stores, NodeStorage):
+                value = value.reshape(-1, value.shape[-1])
+            elif attr == 'edge_index':
+                assert value.shape[2] == 1, "more than one node is not implemented yet"
+                value = torch.transpose(value, 0, 1).reshape(value.shape[1], -1) + 1
+                value = cumsum(value, dim=1)[:, :-1].to(torch.int64)
+
+            # If parts of the data are already on GPU, make sure that auxiliary
+            # data like `batch` or `ptr` are also created on GPU:
+            if isinstance(value, Tensor) and value.is_cuda:
+                device = value.device
+
+            out_store[attr] = value
+
+            if key is not None:  # Heterogeneous:
+                store_slice_dict = slice_dict.get(key, {})
+                assert isinstance(store_slice_dict, dict)
+                store_slice_dict[attr] = slices
+                slice_dict[key] = store_slice_dict
+
+                store_inc_dict = inc_dict.get(key, {})
+                assert isinstance(store_inc_dict, dict)
+                store_inc_dict[attr] = incs
+                inc_dict[key] = store_inc_dict
+            else:  # Homogeneous:
+                slice_dict[attr] = slices
+                inc_dict[attr] = incs
+
+            # In case of node-level storages, we add a top-level batch vector it:
+            if (add_batch and isinstance(stores, NodeStorage) and key == 'x'):
+                repeats = torch.ones((value.shape[0]), dtype=int) * value.shape[1]
+                out_store.batch = repeat_interleave(repeats, device=device)
+                out_store.ptr = cumsum(torch.tensor(repeats, device=device))
+
+    return out, slice_dict, inc_dict
+
+
+class CustomBatch(Batch):
+    @classmethod
+    def from_batch_data(
+        cls,
+        batch_data,
+        batch_num
+    ) -> Self:
+        batch, slice_dict, inc_dict = collate(cls, batch_data)
+
+        batch._num_graphs = batch_num # type: ignore
+        batch._slice_dict = slice_dict  # type: ignore
+        batch._inc_dict = inc_dict  # type: ignore
+
+        return batch
