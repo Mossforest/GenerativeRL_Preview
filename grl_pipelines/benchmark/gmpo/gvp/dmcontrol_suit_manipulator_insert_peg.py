@@ -2,11 +2,11 @@ import torch
 from easydict import EasyDict
 
 directory=""
-domain_name="humanoid"
-task_name="run"
+domain_name="manipulator"
+task_name="insert_peg"
 env_id=f"{domain_name}-{task_name}"
-action_size = 21
-state_size = 67
+action_size = 5
+state_size = 44
 algorithm_type = "GMPO"
 solver_type = "ODESolver"
 model_type = "DiffusionModel"
@@ -42,7 +42,7 @@ model = dict(
             condition_encoder=dict(
                 type="TensorDictencoder",
                 args=dict(
-                ),
+                            ),
             ),
             backbone=dict(
                 type="TemporalSpatialResidualNet",
